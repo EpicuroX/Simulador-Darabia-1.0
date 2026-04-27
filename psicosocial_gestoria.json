@@ -1,0 +1,352 @@
+{
+  "_meta": {
+    "esquema": "darabia_caso_v6",
+    "descripcion": "Caso PRL psicosocial. JSON intermodular: capa común + capa simulador + capa corrector. El simulador NO lee aciertos_criticos/jerarquia_preventiva/indicadores_validos. El corrector NO lee documentos/transcripciones/secciones_dictamen.",
+    "version_motor_minima": "6.0.0"
+  },
+
+  "caso": {
+    "id": "psicosocial_gestoria_v1",
+    "titulo": "Caso 05 - Gestoría Moreno & Asociados",
+    "sector": "Servicios profesionales - Gestoría fiscal",
+    "modelos_teoricos": ["Karasek-DCA", "Siegrist-ERI"],
+    "instrumento": "ISTAS21 versión corta",
+    "prompt_template": "prompt_evaluacion_psico.txt",
+    "puntuacion_maxima_automatica": 60,
+    "puntuacion_profesor": 40,
+    "ra_evaluados": ["RA3", "RA4", "RA5_parcial"]
+  },
+
+  "contexto": {
+    "empresa": "Gestoría Moreno & Asociados S.L.",
+    "sector": "Servicios profesionales - CNAE 6920",
+    "direccion": "C/ Reconquista 14, Actur, Zaragoza",
+    "plantilla": 8,
+    "datos_objetivos": {
+      "absentismo": "21.3%",
+      "referencia_sector": "9.8%",
+      "bajas_psicologicas_12m": 2,
+      "dias_baja_total": 35,
+      "horas_extra_media_marzo": "11.4h/trabajador",
+      "ultima_evaluacion_psicosocial": 2019
+    }
+  },
+
+  "documentos": [
+    {
+      "id": "ficha_empresa",
+      "titulo": "Identificación de la empresa",
+      "categoria": "ficha",
+      "icono": "🏢",
+      "orden": 1,
+      "html": "<div class=\"doc-meta\">Razón social · CNAE · Domicilio</div>\n<table>\n  <tr><th>Razón social</th><td>Gestoría Moreno &amp; Asociados S.L.</td></tr>\n  <tr><th>CNAE</th><td>6920 · Actividades de contabilidad</td></tr>\n  <tr><th>Domicilio</th><td>C/ Reconquista, 14 · Actur · Zaragoza</td></tr>\n  <tr><th>Plantilla</th><td>8 trabajadores</td></tr>\n  <tr><th>Fundación</th><td>1987 · Empresa familiar</td></tr>\n  <tr><th>Última eval. psicosocial</th><td>2019</td></tr>\n</table>\n<p class=\"doc-instruccion\"><em>Instrucción al técnico:</em> Este expediente contiene documentación en bruto extraída de los sistemas de la empresa y de la mutua. No contiene interpretaciones ni diagnósticos. Tu función es analizar cada bloque, extraer evidencias y construir el diagnóstico desde cero.</p>"
+    },
+    {
+      "id": "fichaje_ana_semana_13_19_abril",
+      "titulo": "Registro horario · Semana 13-19 abril (punta IVA)",
+      "categoria": "registro_horario",
+      "icono": "⏱",
+      "orden": 2,
+      "html": "<div class=\"doc-meta\">Sistema Factorial HR · Exportación 20/04/2026 · 08:14</div>\n\n<h4>Ana Giménez Ríos · Indefinido · 40h/semana · Técnico Fiscal</h4>\n<table>\n  <tr><td>Lun 13 abr</td><td>08:00 → 20:30</td><td>Pausa comida 20 min (en mesa, pedido a domicilio)</td></tr>\n  <tr><td>Mar 14 abr</td><td>08:00 → 21:00</td><td>—</td></tr>\n  <tr><td>Mié 15 abr</td><td>07:30 → 20:00</td><td>Llamada cliente 20:12 (fuera de fichaje)</td></tr>\n  <tr><td>Jue 16 abr</td><td>08:00 → 20:45</td><td>—</td></tr>\n  <tr><td>Vie 17 abr</td><td>08:00 → 19:30</td><td>Sale antes — recoge niño en colegio</td></tr>\n</table>\n<blockquote class=\"annot\">Nota interna del sistema (Rafael Moreno · 18/04): \"Ana se ha llevado el portátil a casa el fin de semana para adelantar el modelo 303. Hay que agradecérselo.\"</blockquote>\n\n<h4>Miguel Santamaría Vela · Temporal · 30h/semana · Auxiliar Administrativo</h4>\n<table>\n  <tr><td>Lun 13 abr</td><td>08:00 → 18:30</td></tr>\n  <tr><td>Mar 14 abr</td><td>08:00 → 18:30</td></tr>\n  <tr><td>Mié 15 abr</td><td>08:00 → 18:30</td></tr>\n  <tr><td>Jue 16 abr</td><td>08:00 → 18:30</td></tr>\n  <tr><td>Vie 17 abr</td><td>08:00 → 18:30</td></tr>\n</table>\n<p class=\"doc-nota\">Jornada contratada: 30h. Jornada real registrada: ~50h. Excedente sin compensar visible.</p>\n\n<h4>Sonia Peralta Franco · Indefinido · 37,5h/semana · Contable Senior</h4>\n<table>\n  <tr><td>Lun 13 abr</td><td>08:00 → 15:00</td></tr>\n  <tr><td>Mar 14 abr</td><td>08:00 → 15:00</td></tr>\n  <tr><td>Mié 15 abr</td><td>08:00 → 15:00</td></tr>\n  <tr><td>Jue 16 abr</td><td>08:00 → 15:00</td></tr>\n  <tr><td>Vie 17 abr</td><td>08:00 → 15:00</td></tr>\n</table>\n<blockquote class=\"annot\">Anotación manuscrita de Rafael Moreno (escaneada): \"Falta de compromiso flagrante. En plena campaña de IVA se va a su hora como si no fuera con ella.\"</blockquote>"
+    },
+    {
+      "id": "bandeja_ana_09h47",
+      "titulo": "Bandeja Outlook · Ana · Lunes 13 abr · 09:47",
+      "categoria": "comunicaciones",
+      "icono": "✉",
+      "orden": 3,
+      "html": "<div class=\"doc-meta\">142 sin leer · 12 llamadas perdidas entre 08:05 y 09:40</div>\n<blockquote>🔴 URGENTE — Error en Modelo 111 enviado ayer (Transportes Ebro) · 08:23<br>\n  \"Ana, ha llamado el cliente muy enfadado. Dice que el importe no cuadra. Necesito esto resuelto antes de las 11.\" — Rafael</blockquote>\n<blockquote>RE: RE: RE: Consulta IVA — Cliente muy indignado (Fontanería Casas) · 08:41<br>\n  \"Llevo tres semanas esperando respuesta. Si no me llamáis hoy, cambio de gestoría.\"</blockquote>\n<blockquote>⚠ COLEGIO SAGRADA FAMILIA — Tu hijo Marcos · 09:12<br>\n  \"Buenos días, le escribimos para comunicarle que Marcos no se encuentra bien. Por favor, pase a recogerle o llámenos.\"</blockquote>\n<blockquote>Ana, mira esto cuando puedas — es para hoy (Rafael) · 09:38<br>\n  \"He prometido al cliente de Delicias que le tenemos el balance antes de las 17h. Sé que estás liada pero tú eres la única que sabe cómo va ese expediente.\"</blockquote>"
+    },
+    {
+      "id": "contrato_miguel_clausula_3",
+      "titulo": "Contrato Miguel Santamaría · Renovación nº 4",
+      "categoria": "contrato",
+      "icono": "§",
+      "orden": 4,
+      "html": "<div class=\"doc-meta\">Art. 15.2 ET · Duración 01/02/2026 – 30/04/2026 · Renovación nº 4</div>\n<p><strong>Cláusula 1ª · Objeto.</strong> Cubrir las necesidades de producción derivadas del incremento de la actividad en el periodo de cierre fiscal trimestral.</p>\n<p><strong>Cláusula 2ª · Jornada.</strong> 30 horas semanales, lunes a viernes, 08:00 a 14:00.</p>\n<blockquote><strong>Cláusula 3ª · Funciones ⚠</strong><br>\n  \"El trabajador desempeñará las funciones propias de la categoría de Auxiliar Administrativo y aquellas otras que la dirección de la empresa considere necesarias para el buen funcionamiento de la oficina, incluyendo recados externos y apoyo en cualquier departamento.\"</blockquote>\n<p><strong>Cláusula 4ª · Retribución.</strong> Grupo profesional IV · Convenio Oficinas y Despachos de Aragón · proporcional a jornada.</p>\n<blockquote class=\"annot\">Anotación del expediente (entrevista mutua, 08/04/2026): \"Esta semana he llevado el coche de Rafael a la ITV, la semana pasada estuve tres días archivando documentos del 2018 en el sótano. No sé si el mes que viene me renuevan.\"</blockquote>"
+    },
+    {
+      "id": "istas21_marzo_2026",
+      "titulo": "Cuestionario ISTAS21 · selección de ítems",
+      "categoria": "instrumento",
+      "icono": "%",
+      "orden": 5,
+      "html": "<div class=\"doc-meta\">Aplicación marzo 2026 · Participación 7/8 · 1 declina · n=7</div>\n<table>\n  <tr><th>Ítem · Dimensión</th><th>Siempre</th><th>Muchas</th><th>Algunas</th><th>Solo alguna</th><th>Nunca</th></tr>\n  <tr><td>1 · ¿Tiene tiempo para terminar su trabajo?</td><td>6</td><td>1</td><td>—</td><td>—</td><td>—</td></tr>\n  <tr><td>3 · ¿Tiene que trabajar muy rápido?</td><td>5</td><td>2</td><td>—</td><td>—</td><td>—</td></tr>\n  <tr><td>7 · ¿Tiene influencia sobre la cantidad asignada?</td><td>—</td><td>—</td><td>1</td><td>2</td><td>4</td></tr>\n  <tr><td>12 · ¿Sabe qué tareas son su responsabilidad?</td><td>—</td><td>1</td><td>3</td><td>2</td><td>1</td></tr>\n  <tr><td>15 · ¿Su jefe le ayuda a planificar el trabajo?</td><td>—</td><td>—</td><td>—</td><td>—</td><td><strong>7</strong></td></tr>\n  <tr><td>21 · ¿Piensa en exigencias domésticas al trabajar?</td><td>5</td><td>2</td><td>—</td><td>—</td><td>—</td></tr>\n  <tr><td>22 · Si falta de casa, ¿tareas domésticas sin hacer?</td><td>4</td><td>3</td><td>—</td><td>—</td><td>—</td></tr>\n</table>\n<p class=\"doc-nota\"><em>No se incluye interpretación de niveles de riesgo — esa es función del técnico.</em></p>"
+    },
+    {
+      "id": "bajas_IT_2025_2026",
+      "titulo": "Documentación de incapacidades temporales",
+      "categoria": "incapacidades",
+      "icono": "⊕",
+      "orden": 6,
+      "html": "<div class=\"doc-meta\">Período: may 2025 – abr 2026 · 2 procesos registrados</div>\n\n<h4>IT-2025-AR-08841 · 04/11/2025 · 14 días</h4>\n<p>Trabajadora · Categoría Senior · Antigüedad &gt; 10 años · CIE-10 <strong>F41.1</strong> (Trastorno de ansiedad generalizada).</p>\n<blockquote>\"No puedo dormir. Me despierto a las 3 de la mañana pensando en el trabajo y no consigo volver a dormirme. Tengo una opresión en el pecho que no se me quita. Llevo meses así pero esta semana ya no puedo más.\"</blockquote>\n\n<h4>IT-2026-AR-01247 · 17/02/2026 · 21 días</h4>\n<p>Trabajador · Categoría Junior · Antigüedad &lt; 2 años · CIE-10 <strong>F45.1</strong> (Trastorno somatomorfo).</p>\n<p class=\"doc-nota\">Cefaleas tensionales recurrentes. Dolor cervico-dorsal. Sin patología orgánica.</p>"
+    }
+  ],
+
+  "transcripciones": [
+    {
+      "id": "transcripcion_ana_08abril",
+      "trabajador": "Ana Giménez",
+      "rol": "Técnica fiscal senior · 11 años en empresa",
+      "edad": 38,
+      "fecha": "2026-04-08",
+      "hora": "16:30",
+      "duracion": "34 min",
+      "icono": "👩‍💼",
+      "orden": 1,
+      "html": "<blockquote>\"Siento que si me voy a mi hora, el despacho se hunde. Rafael me dice que soy su mano derecha, pero esta mano derecha no duerme más de cuatro horas.\"</blockquote>\n<blockquote>\"El problema no es que haya mucho trabajo en abril. Es que siempre hay mucho trabajo, y siempre soy yo quien lo resuelve. Nadie más sabe cómo van los expedientes de los clientes importantes.\"</blockquote>\n<blockquote>\"Mi madre está sola en casa los martes y los jueves. Yo debería estar con ella a las tres. Llevo tres meses sin poder.\"</blockquote>\n<p class=\"doc-nota\"><em>Observación técnica:</em> Mantiene contacto visual sostenido. Interrumpe el discurso en dos ocasiones. Refiere insomnio de mantenimiento desde hace ~3 meses.</p>"
+    },
+    {
+      "id": "transcripcion_miguel_09abril",
+      "trabajador": "Miguel Santamaría",
+      "rol": "Auxiliar administrativo · 14 meses · contrato temporal",
+      "edad": 29,
+      "fecha": "2026-04-09",
+      "hora": "10:00",
+      "duracion": "21 min",
+      "icono": "👨‍💼",
+      "orden": 2,
+      "html": "<blockquote>\"Mi contrato dice auxiliar, pero ayer estuve tres horas limpiando el archivo del sótano y luego fui a por el coche del jefe a la ITV. No sé qué se espera exactamente de mí, y me da miedo preguntar por si no me renuevan en abril.\"</blockquote>\n<blockquote>\"Cada domingo por la noche me entra una angustia que no sé explicar. No sé si el lunes habrá trabajo para mí. Llevo así catorce meses.\"</blockquote>\n<blockquote>\"He empezado a cometer errores que antes no cometía. El otro día tuve que rehacer un modelo tres veces.\"</blockquote>"
+    },
+    {
+      "id": "transcripcion_sonia_10abril",
+      "trabajador": "Sonia Peralta",
+      "rol": "Contable senior · 17 años · no participa en ISTAS21",
+      "edad": 45,
+      "fecha": "2026-04-10",
+      "hora": "09:15",
+      "duracion": "12 min · interrumpida por la trabajadora",
+      "icono": "👩‍💻",
+      "orden": 3,
+      "nota_tecnica": "El silencio inicial y la declaración final son evidencia. No diagnosticar acoso desde un dictamen psicosocial ordinario: requiere apertura de protocolo (RD 901/2020 + Art. 48 LO 3/2007).",
+      "html": "<blockquote>\"Yo cumplo mi contrato. Si el resto quiere vivir aquí dentro, es su problema y su decisión.\"</blockquote>\n<blockquote class=\"annot\">\"Rafael ya ni me saluda. Eso tiene un nombre y no es estrés precisamente.\"</blockquote>"
+    },
+    {
+      "id": "transcripcion_rafael_interlocutor",
+      "trabajador": "Rafael Moreno",
+      "rol": "Gerente · socio único · interlocutor principal del peritaje",
+      "edad": 61,
+      "fecha": null,
+      "hora": null,
+      "duracion": null,
+      "icono": "👔",
+      "orden": 4,
+      "html": "<div class=\"doc-locked-mini\">Rafael actúa como interlocutor institucional. No forma parte de las entrevistas preliminares.</div>"
+    }
+  ],
+
+  "secciones_dictamen": [
+    {
+      "id": "01_unidades_analisis",
+      "etiqueta": "Unidades de análisis",
+      "tipo": "texto",
+      "ayuda": "Identifica departamentos, puestos y colectivos con exposición distinta. No describas a la empresa entera como un bloque homogéneo.",
+      "placeholder": "Describe las unidades de análisis identificadas y el criterio por el que las has separado..."
+    },
+    {
+      "id": "02_triangulacion",
+      "etiqueta": "Triangulación de evidencias",
+      "tipo": "texto",
+      "ayuda": "Cruza ISTAS21, transcripciones y registros documentales. Mínimo 3 fuentes convergentes por factor de riesgo identificado.",
+      "placeholder": "Para cada factor de riesgo, expón las fuentes que lo confirman y por qué convergen..."
+    },
+    {
+      "id": "03_modelos_teoricos",
+      "etiqueta": "Modelos teóricos",
+      "tipo": "texto",
+      "ayuda": "Aplica Karasek (Demanda-Control-Apoyo) y Siegrist (Esfuerzo-Recompensa) a los datos del caso. No definas los modelos: úsalos.",
+      "placeholder": "Aplica Karasek y Siegrist al caso. Indica qué dimensiones se cumplen y con qué evidencia..."
+    },
+    {
+      "id": "04_hipotesis",
+      "etiqueta": "Hipótesis diagnóstica",
+      "tipo": "texto",
+      "ayuda": "Identifica el mecanismo causal estructural. La hipótesis debe ser organizacional, no individual: el problema no es que un trabajador no aguante el estrés.",
+      "placeholder": "Formula tu hipótesis sobre el mecanismo causal estructural del problema..."
+    },
+    {
+      "id": "05_plan_accion",
+      "etiqueta": "Plan de acción",
+      "tipo": "tabla",
+      "ayuda": "Diseña medidas preventivas. Una fila por medida. Prioriza medidas primarias (organización del trabajo) sobre secundarias o terciarias (formación, terapia individual).",
+      "aviso_evaluacion": "Esta sección se evalúa especialmente en el informe final. Cada medida debe incluir indicador, responsable y plazo.",
+      "columnas": [
+        { "id": "factor",      "etiqueta": "Factor",      "ancho": "16%", "tipo": "texto_corto" },
+        { "id": "medida",      "etiqueta": "Medida",      "ancho": "32%", "tipo": "texto_largo" },
+        { "id": "indicador",   "etiqueta": "Indicador",   "ancho": "20%", "tipo": "texto_largo" },
+        { "id": "responsable", "etiqueta": "Responsable", "ancho": "16%", "tipo": "texto_corto" },
+        { "id": "plazo",       "etiqueta": "Plazo",       "ancho": "16%", "tipo": "texto_corto" }
+      ],
+      "min_filas": 1,
+      "max_filas": 20,
+      "fila_inicial_vacia": true
+    },
+    {
+      "id": "06_argumentacion",
+      "etiqueta": "Argumentación legal y económica",
+      "tipo": "texto",
+      "ayuda": "Cita la LPRL (Art. 15, 16, 4.7) y otra normativa pertinente. Cuantifica con datos concretos del expediente (absentismo, horas extra, días de baja).",
+      "placeholder": "Argumenta la obligatoriedad legal y la racionalidad económica de las medidas propuestas..."
+    }
+  ],
+
+  "aciertos_criticos": {
+    "triangulacion": {
+      "fuentes_validas": [
+        "item_1_istas21",
+        "item_3_istas21",
+        "item_7_istas21",
+        "item_12_istas21",
+        "item_15_istas21",
+        "item_21_istas21",
+        "item_22_istas21",
+        "fichaje_ana_semana_13_19_abril",
+        "email_bandeja_ana_09h47",
+        "contrato_miguel_clausula_3",
+        "baja_IT_2025_AR_08841",
+        "baja_IT_2026_AR_01247",
+        "transcripcion_ana_08abril",
+        "transcripcion_miguel_09abril",
+        "transcripcion_sonia_10abril",
+        "anotacion_rafael_fichaje"
+      ],
+      "minimo_requerido": 3,
+      "penalizacion_fuente_generica": 2
+    },
+    "factores_riesgo": {
+      "sobrecarga_cuantitativa": {
+        "evidencias_clave": ["item_1_istas21_6de7", "fichaje_ana_12h_diarias", "horas_extra_11h_media"],
+        "modelo": "Karasek_alta_demanda",
+        "puntos": 5
+      },
+      "bajo_control": {
+        "evidencias_clave": ["item_7_istas21_4de7_nunca", "clausula_3_contrato_miguel"],
+        "modelo": "Karasek_bajo_control",
+        "puntos": 4
+      },
+      "ambiguedad_rol": {
+        "evidencias_clave": ["item_12_istas21_distribucion", "clausula_3_contrato", "transcripcion_miguel_ITV"],
+        "modelo": "Karasek_bajo_control",
+        "puntos": 4
+      },
+      "ausencia_apoyo_superior": {
+        "evidencias_clave": ["item_15_istas21_7de7_NUNCA", "transcripcion_sonia_ni_saluda", "anotacion_rafael_falta_compromiso"],
+        "modelo": "Karasek_bajo_apoyo_social",
+        "puntos": 5
+      },
+      "doble_presencia": {
+        "evidencias_clave": ["item_21_istas21_5de7", "item_22_istas21_4de7", "transcripcion_ana_madre_sola"],
+        "modelo": "ISTAS21_doble_presencia",
+        "puntos": 4
+      },
+      "desequilibrio_esfuerzo_recompensa": {
+        "evidencias_clave": ["fichaje_ana_portatil_finde", "transcripcion_ana_siempre_yo"],
+        "modelo": "Siegrist_ERI",
+        "puntos": 4,
+        "bonus": "+2 pts si identifica Siegrist específicamente en Ana"
+      }
+    },
+    "ejes_evaluacion": [
+      "capacidad_analisis",
+      "uso_marcos_teoricos",
+      "criterio_intervencion",
+      "deteccion_riesgos_criticos",
+      "argumentacion_profesional"
+    ],
+    "rubrica_evaluacion": {
+      "total_sumando": 100,
+      "criterios": [
+        {
+          "id": "unidades_analisis",
+          "nombre": "Unidades de análisis",
+          "peso": 10,
+          "descripcion": "Identificación diferenciada de departamentos, puestos y colectivos con exposición distinta."
+        },
+        {
+          "id": "triangulacion",
+          "nombre": "Triangulación de evidencias",
+          "peso": 15,
+          "descripcion": "Cruce de ISTAS21, entrevistas y registros documentales. Mínimo 3 fuentes convergentes por factor de riesgo."
+        },
+        {
+          "id": "modelos_teoricos",
+          "nombre": "Modelos teóricos",
+          "peso": 20,
+          "descripcion": "Aplicación estricta y operativa de Karasek (DCA) y Siegrist (ERI) a los datos del caso."
+        },
+        {
+          "id": "hipotesis",
+          "nombre": "Formulación de hipótesis",
+          "peso": 20,
+          "descripcion": "Identificación del mecanismo causal estructural. Hipótesis organizacional, no individual."
+        },
+        {
+          "id": "plan_accion",
+          "nombre": "Plan de acción",
+          "peso": 20,
+          "descripcion": "Jerarquía preventiva + rigor operativo (KPI + plazo + responsable)."
+        },
+        {
+          "id": "argumentacion",
+          "nombre": "Argumentación legal y económica",
+          "peso": 15,
+          "descripcion": "Citación LPRL + cuantificación económica con datos del expediente."
+        }
+      ]
+    },
+    "mapeo_ejes_criterios": {
+      "capacidad_analisis": ["unidades_analisis", "triangulacion"],
+      "uso_marcos_teoricos": ["modelos_teoricos"],
+      "deteccion_riesgos_criticos": ["hipotesis"],
+      "criterio_intervencion": ["plan_accion"],
+      "argumentacion_profesional": ["argumentacion"]
+    },
+    "knockout_criteria": {
+      "senyal_sonia": {
+        "obligatorio": true,
+        "descripcion": "Indicio de posible conducta hostil que exige apertura de protocolo (RD 901/2020 + Art. 48 LO 3/2007).",
+        "respuesta_minima": "apertura_protocolo_investigacion",
+        "penalizacion_si_ignorada": 15,
+        "penalizacion_diagnostico_sin_protocolo": 10,
+        "tipo": "knockout_transversal"
+      }
+    }
+  },
+
+  "jerarquia_preventiva": {
+    "medidas_primarias_esperadas": [
+      "contratacion_refuerzo_campana",
+      "redistribucion_carga_planificacion",
+      "descripcion_puesto_miguel",
+      "protocolo_supervision_1a1",
+      "flexibilidad_horaria_teletrabajo",
+      "protocolo_investigacion_sonia"
+    ],
+    "medidas_penalizadas": [
+      "taller_gestion_estres",
+      "sesiones_mindfulness",
+      "derivacion_psicologo_individual",
+      "yoga"
+    ],
+    "penalizacion_medida_terciaria_como_unica": 5
+  },
+
+  "indicadores_validos": {
+    "formato_requerido": "numero + unidad + plazo + responsable",
+    "regla_rigor_operativo": "Cada medida requiere KPI, plazo y responsable. Sin uno de ellos, la medida vale 0.",
+    "ejemplos_validos": [
+      "reducción absentismo 21.3% a 10% en 12 meses - responsable: Rafael Moreno",
+      "horas extra ≤ 3h por trabajador/mes - responsable: RRHH"
+    ],
+    "ejemplos_invalidos": [
+      "mejorar el absentismo",
+      "reducir el estrés"
+    ]
+  },
+
+  "prompt_evaluacion": {
+    "archivo": "prompt_evaluacion_psico.txt",
+    "version": "2.0",
+    "calibrado_con": "resolucion_modelo_caso05_v1.docx"
+  }
+}

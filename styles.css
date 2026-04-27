@@ -1,0 +1,1519 @@
+/* =============================================================================
+   DARABIA ENGINE V6 · CONSOLA DE PERITAJE PSICOSOCIAL
+   styles.css · v6.0.0 — escrito desde cero
+   -----------------------------------------------------------------------------
+   Filosofía:
+     · Profesional sobrio. Herramienta docente, no producto comercial.
+     · Simplicidad > estética. Sólido > bonito.
+     · Sin animaciones de layout. Sin transiciones de grid. Sin overlays.
+     · Caso-agnóstico: no hay reglas que asuman 6 secciones, NPCs, etc.
+
+   Estructura del archivo:
+     0. Reset y base
+     1. Variables (paleta, tipografía, spacings)
+     2. Layout raíz (header / main / footer)
+     3. Header
+     4. Footer y barra de estado
+     5. Panel izquierdo · Expediente
+        5a. Acordeón (Documentos / Transcripciones)
+        5b. Lista de items
+        5c. Visor de documento abierto
+     6. Panel derecho · Dictamen
+        6a. Tabs de secciones
+        6b. Encabezado de sección activa (etiqueta + ayuda + aviso)
+        6c. Editor de texto (textarea)
+        6d. Tabla del Plan de acción
+     7. Botones (primario, secundario, ghost, danger inline)
+     8. Pantallas auxiliares (boot, registro, error fatal)
+     9. Banner de aviso (capa 8 lo usará)
+    10. Responsive (≤1100 / ≤800)
+    11. Print stylesheet (capa 7 lo afinará)
+   ============================================================================= */
+
+
+/* =============================================================================
+   0 · RESET Y BASE
+   ============================================================================= */
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;       /* scroll global desactivado, scroll por panel */
+}
+
+body {
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.55;
+    color: var(--text-1);
+    background: var(--bg-0);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+button {
+    font-family: inherit;
+    font-size: inherit;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+}
+
+input, textarea {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    background: transparent;
+    border: none;
+    outline: none;
+    width: 100%;
+}
+
+textarea {
+    resize: vertical;
+    line-height: 1.55;
+}
+
+a {
+    color: var(--accent-blue);
+    text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: var(--border-1);
+    border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--border-2); }
+
+
+/* =============================================================================
+   1 · VARIABLES
+   ============================================================================= */
+:root {
+    /* Tipografía — mantenemos Inter + JetBrains Mono como pidió briefing */
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+    /* Paleta · escala de fondos (oscuro) */
+    --bg-0: #0a0e1a;       /* fondo absoluto */
+    --bg-1: #111827;       /* paneles */
+    --bg-2: #1f2937;       /* elementos elevados (cards, inputs) */
+    --bg-3: #2a3544;       /* hover de elementos elevados */
+
+    /* Paleta · texto (escala de claros) */
+    --text-1: #f1f5f9;     /* principal */
+    --text-2: #cbd5e1;     /* secundario */
+    --text-3: #94a3b8;     /* terciario / metadatos */
+    --text-4: #64748b;     /* deshabilitado / labels */
+
+    /* Bordes */
+    --border-1: rgba(255, 255, 255, 0.08);
+    --border-2: rgba(255, 255, 255, 0.16);
+    --border-3: rgba(255, 255, 255, 0.24);
+
+    /* Acentos (los del briefing) */
+    --accent-green: #10d98a;
+    --accent-red:   #ff4d6a;
+    --accent-amber: #f59e0b;
+    --accent-blue:  #60a5fa;
+
+    /* Acentos suaves (fondos teñidos) */
+    --accent-green-soft: rgba(16, 217, 138, 0.10);
+    --accent-red-soft:   rgba(255, 77, 106, 0.10);
+    --accent-amber-soft: rgba(245, 158, 11, 0.08);
+    --accent-blue-soft:  rgba(96, 165, 250, 0.10);
+
+    /* Spacings (escala 4px) */
+    --s-1: 4px;
+    --s-2: 8px;
+    --s-3: 12px;
+    --s-4: 16px;
+    --s-5: 20px;
+    --s-6: 24px;
+    --s-7: 32px;
+
+    /* Radios */
+    --r-sm: 4px;
+    --r-md: 6px;
+    --r-lg: 10px;
+
+    /* Alturas fijas */
+    --header-h: 60px;       /* header con dos líneas */
+    --footer-h: 56px;
+    --tabs-h: 44px;
+
+    /* Proporciones del workspace */
+    --col-left:  38%;
+    --col-right: 62%;
+
+    /* Sombras */
+    --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.3);
+
+    /* Transiciones — solo color/opacity, jamás layout */
+    --t-fast: 0.12s ease;
+    --t-mid: 0.18s ease;
+
+    /* -----------------------------------------------------------
+       Aliases de retrocompatibilidad para inline styles del HTML.
+       El index.html actual hace referencia a --green, --red, --mono
+       en sus pantallas de boot/registro/error. Estos aliases evitan
+       tener que tocar el HTML hasta que la capa final lo limpie.
+       ----------------------------------------------------------- */
+    --green: var(--accent-green);
+    --red:   var(--accent-red);
+    --mono:  var(--font-mono);
+}
+
+
+/* =============================================================================
+   2 · LAYOUT RAÍZ
+   ============================================================================= */
+#darabia-root {
+    height: 100vh;
+    width: 100vw;
+    display: grid;
+    grid-template-rows: var(--header-h) 1fr var(--footer-h);
+    overflow: hidden;
+}
+
+/* Cuerpo principal · dos columnas fijas. Sin transiciones. */
+.workspace {
+    display: grid;
+    grid-template-columns: var(--col-left) var(--col-right);
+    min-height: 0;          /* truco para que los hijos hagan scroll interno */
+    overflow: hidden;
+    border-top: 1px solid var(--border-1);
+    border-bottom: 1px solid var(--border-1);
+}
+
+/* Cada panel ocupa todo su grid cell y gestiona su propio scroll */
+.panel {
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg-1);
+}
+
+.panel-left {
+    border-right: 1px solid var(--border-1);
+}
+
+
+/* =============================================================================
+   3 · HEADER
+   ============================================================================= */
+.topbar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: var(--s-3) var(--s-6);
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--border-1);
+    height: var(--header-h);
+}
+
+.topbar-brand-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.topbar-line-1 {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-1);
+    letter-spacing: -0.005em;
+}
+
+.topbar-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--r-sm);
+    background: var(--accent-green);
+    color: var(--bg-0);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.topbar-line-2 {
+    font-size: 12px;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+    letter-spacing: 0.02em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    color: var(--text-2);
+    font-size: 13px;
+}
+
+.topbar-alumno {
+    color: var(--text-2);
+    font-size: 13px;
+    padding-right: var(--s-3);
+    border-right: 1px solid var(--border-1);
+}
+
+.topbar-alumno-grupo {
+    color: var(--text-3);
+    margin-left: var(--s-2);
+}
+
+
+/* =============================================================================
+   4 · FOOTER Y BARRA DE ESTADO
+   ============================================================================= */
+.footer {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 0 var(--s-6);
+    background: var(--bg-1);
+    border-top: 1px solid var(--border-1);
+    gap: var(--s-4);
+}
+
+.footer-status {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    font-size: 12px;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+}
+
+.save-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    transition: background var(--t-fast);
+}
+
+.save-dot.is-saving { background: var(--accent-amber); }
+.save-dot.is-error  { background: var(--accent-red); }
+
+.footer-progress {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    color: var(--text-3);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding-left: var(--s-3);
+    border-left: 1px solid var(--border-1);
+}
+
+.footer-progress-num {
+    color: var(--text-1);
+    font-weight: 600;
+}
+
+.footer-actions {
+    display: flex;
+    gap: var(--s-3);
+}
+
+
+/* =============================================================================
+   5 · PANEL IZQUIERDO · EXPEDIENTE
+   ============================================================================= */
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--s-4) var(--s-5);
+    border-bottom: 1px solid var(--border-1);
+    background: var(--bg-1);
+    flex-shrink: 0;
+}
+
+.panel-title {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-3);
+    font-weight: 600;
+}
+
+.panel-body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: var(--s-3) 0;
+}
+
+
+/* 5a · Acordeón */
+.expediente-grupo {
+    border-bottom: 1px solid var(--border-1);
+}
+.expediente-grupo:last-child { border-bottom: none; }
+
+.expediente-grupo-header {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    width: 100%;
+    padding: var(--s-3) var(--s-5);
+    background: transparent;
+    color: var(--text-2);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    text-align: left;
+    transition: color var(--t-fast), background var(--t-fast);
+}
+
+.expediente-grupo-header:hover {
+    background: var(--bg-2);
+    color: var(--text-1);
+}
+
+.expediente-grupo-caret {
+    width: 12px;
+    height: 12px;
+    color: var(--text-4);
+    transition: transform var(--t-fast);
+}
+
+.expediente-grupo.is-collapsed .expediente-grupo-caret {
+    transform: rotate(-90deg);
+}
+
+.expediente-grupo-count {
+    margin-left: auto;
+    color: var(--text-4);
+    font-size: 10px;
+}
+
+.expediente-grupo-list {
+    display: flex;
+    flex-direction: column;
+    padding: var(--s-1) 0 var(--s-3) 0;
+}
+
+.expediente-grupo.is-collapsed .expediente-grupo-list {
+    display: none;
+}
+
+
+/* 5b · Item de la lista (documento o transcripción) */
+.expediente-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-3);
+    width: 100%;
+    padding: var(--s-2) var(--s-5) var(--s-2) var(--s-6);
+    background: transparent;
+    text-align: left;
+    color: var(--text-2);
+    font-size: 13px;
+    line-height: 1.4;
+    transition: background var(--t-fast), color var(--t-fast);
+}
+
+.expediente-item:hover {
+    background: var(--bg-2);
+    color: var(--text-1);
+}
+
+.expediente-item:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: -2px;
+}
+
+.expediente-item-icon {
+    flex-shrink: 0;
+    width: 18px;
+    text-align: center;
+    color: var(--text-3);
+    font-size: 14px;
+    margin-top: 1px;
+}
+
+.expediente-item-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.expediente-item-titulo {
+    color: inherit;
+    font-size: 13px;
+    line-height: 1.35;
+}
+
+.expediente-item-meta {
+    color: var(--text-4);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.01em;
+}
+
+
+/* 5c · Visor de documento abierto */
+.visor {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.visor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    padding: var(--s-3) var(--s-5);
+    border-bottom: 1px solid var(--border-1);
+    background: var(--bg-1);
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.visor-back {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    color: var(--text-2);
+    font-size: 12px;
+    font-family: var(--font-mono);
+    padding: var(--s-1) var(--s-2);
+    border-radius: var(--r-sm);
+    transition: background var(--t-fast), color var(--t-fast);
+}
+
+.visor-back:hover {
+    background: var(--bg-2);
+    color: var(--text-1);
+}
+
+.visor-back-arrow {
+    font-size: 14px;
+}
+
+.visor-titulo {
+    font-size: 13px;
+    color: var(--text-1);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.visor-content {
+    padding: var(--s-5) var(--s-6);
+    color: var(--text-2);
+    font-size: 13.5px;
+    line-height: 1.65;
+    max-width: 100%;
+}
+
+/* Estilos para el HTML inyectado del JSON (documentos y transcripciones) */
+.visor-content h3 {
+    font-size: 16px;
+    color: var(--text-1);
+    margin-bottom: var(--s-2);
+    font-weight: 600;
+}
+
+.visor-content h4 {
+    font-size: 14px;
+    color: var(--text-1);
+    margin-top: var(--s-5);
+    margin-bottom: var(--s-2);
+    font-weight: 600;
+}
+
+.visor-content p {
+    margin-bottom: var(--s-3);
+}
+
+.visor-content blockquote {
+    margin: var(--s-3) 0;
+    padding: var(--s-3) var(--s-4);
+    border-left: 3px solid var(--border-2);
+    background: var(--bg-2);
+    border-radius: var(--r-sm);
+    color: var(--text-2);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.visor-content blockquote.annot {
+    border-left-color: var(--accent-amber);
+    background: var(--accent-amber-soft);
+}
+
+.visor-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: var(--s-3) 0;
+    font-size: 12.5px;
+}
+
+/* Wrapper opcional para tablas anchas. La UI envuelve <table> en este div
+   solo si la tabla podría exceder el ancho del visor. Permite scroll
+   horizontal local SIN forzar display:block en el <table>. */
+.visor-content .visor-tabla-wrap {
+    overflow-x: auto;
+    max-width: 100%;
+    margin: var(--s-3) 0;
+}
+
+.visor-content .visor-tabla-wrap > table {
+    margin: 0;
+}
+
+.visor-content table th,
+.visor-content table td {
+    border: 1px solid var(--border-1);
+    padding: var(--s-2) var(--s-3);
+    text-align: left;
+    vertical-align: top;
+}
+
+.visor-content table th {
+    background: var(--bg-2);
+    color: var(--text-1);
+    font-weight: 600;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.visor-content .doc-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-4);
+    letter-spacing: 0.04em;
+    margin-bottom: var(--s-3);
+    padding-bottom: var(--s-3);
+    border-bottom: 1px dashed var(--border-1);
+}
+
+.visor-content .doc-instruccion,
+.visor-content .doc-nota {
+    font-size: 12px;
+    color: var(--text-3);
+    margin: var(--s-3) 0;
+}
+
+.visor-content .doc-locked-mini {
+    background: var(--bg-2);
+    border: 1px dashed var(--border-1);
+    border-radius: var(--r-md);
+    padding: var(--s-4);
+    color: var(--text-3);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.visor-content strong { color: var(--text-1); }
+.visor-content em { color: var(--text-2); font-style: italic; }
+
+
+/* =============================================================================
+   6 · PANEL DERECHO · DICTAMEN
+   ============================================================================= */
+.panel-editor {
+    background: var(--bg-1);
+}
+
+/* 6a · Tabs de secciones */
+.editor-tabs {
+    display: flex;
+    align-items: stretch;
+    border-bottom: 1px solid var(--border-1);
+    background: var(--bg-1);
+    flex-shrink: 0;
+    height: var(--tabs-h);
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.editor-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    padding: 0 var(--s-4);
+    background: transparent;
+    color: var(--text-3);
+    font-size: 13px;
+    border-right: 1px solid var(--border-1);
+    border-bottom: 2px solid transparent;
+    transition: color var(--t-fast), background var(--t-fast), border-color var(--t-fast);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.editor-tab:hover {
+    color: var(--text-1);
+    background: var(--bg-2);
+}
+
+.editor-tab.is-active {
+    color: var(--text-1);
+    background: var(--bg-2);
+    border-bottom-color: var(--accent-green);
+}
+
+.editor-tab-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-4);
+    letter-spacing: 0.05em;
+}
+
+.editor-tab.is-active .editor-tab-num {
+    color: var(--text-2);
+}
+
+.editor-tab-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--border-2);
+    margin-right: -2px;
+    transition: background var(--t-fast);
+}
+
+.editor-tab.has-content .editor-tab-dot {
+    background: var(--accent-green);
+}
+
+.editor-tab:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: -2px;
+}
+
+
+/* 6b · Encabezado de sección activa */
+.editor-canvas {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-section-head {
+    padding: var(--s-5) var(--s-6) var(--s-3) var(--s-6);
+    border-bottom: 1px solid var(--border-1);
+    background: var(--bg-1);
+}
+
+.editor-section-titulo {
+    font-size: 16px;
+    color: var(--text-1);
+    font-weight: 600;
+    margin-bottom: var(--s-2);
+    letter-spacing: -0.005em;
+}
+
+.editor-section-titulo-num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-3);
+    margin-right: var(--s-2);
+    font-weight: 500;
+}
+
+.editor-section-ayuda {
+    color: var(--text-3);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+/* Aviso de evaluación (Ajuste 3 — sección tabla) */
+.editor-section-aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-3);
+    margin: var(--s-4) var(--s-6) 0 var(--s-6);
+    padding: var(--s-3) var(--s-4);
+    background: var(--accent-amber-soft);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: var(--r-md);
+    color: var(--text-2);
+    font-size: 12.5px;
+    line-height: 1.55;
+}
+
+.editor-section-aviso-icon {
+    color: var(--accent-amber);
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+
+/* 6c · Editor de texto (textarea) */
+.editor-texto-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: var(--s-5) var(--s-6) var(--s-6) var(--s-6);
+    min-height: 0;
+}
+
+.editor-texto {
+    flex: 1;
+    width: 100%;
+    background: var(--bg-2);
+    border: 1px solid var(--border-1);
+    border-radius: var(--r-md);
+    padding: var(--s-4);
+    color: var(--text-1);
+    font-size: 14px;
+    line-height: 1.65;
+    transition: border-color var(--t-fast);
+    min-height: 240px;
+    resize: none;       /* el textarea ocupa todo el alto disponible */
+}
+
+.editor-texto:focus {
+    border-color: var(--accent-blue);
+    background: var(--bg-1);
+}
+
+.editor-texto::placeholder {
+    color: var(--text-4);
+    opacity: 1;
+}
+
+
+/* 6d · Tabla del Plan de acción */
+.editor-tabla-wrap {
+    padding: var(--s-5) var(--s-6) var(--s-6) var(--s-6);
+}
+
+.editor-tabla {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: var(--bg-2);
+    border: 1px solid var(--border-1);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    table-layout: fixed;
+}
+
+.editor-tabla thead th {
+    background: var(--bg-1);
+    color: var(--text-2);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+    padding: var(--s-3) var(--s-3);
+    text-align: left;
+    border-bottom: 1px solid var(--border-1);
+}
+
+.editor-tabla thead th.col-acciones {
+    width: 36px;
+    padding: var(--s-3) 0;
+    text-align: center;
+}
+
+.editor-tabla tbody td {
+    border-bottom: 1px solid var(--border-1);
+    padding: 0;            /* el input/textarea controla su propio padding */
+    vertical-align: top;
+    background: var(--bg-2);
+}
+
+.editor-tabla tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Inputs y textareas dentro de las celdas */
+.editor-celda-input,
+.editor-celda-textarea {
+    width: 100%;
+    padding: var(--s-3) var(--s-3);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 0;
+    color: var(--text-1);
+    font-size: 13px;
+    line-height: 1.5;
+    transition: background var(--t-fast), border-color var(--t-fast);
+}
+
+.editor-celda-input:hover,
+.editor-celda-textarea:hover {
+    background: var(--bg-3);
+}
+
+.editor-celda-input:focus,
+.editor-celda-textarea:focus {
+    background: var(--bg-1);
+    border-color: var(--accent-blue);
+    outline: none;
+}
+
+.editor-celda-textarea {
+    min-height: 44px;
+    resize: vertical;
+}
+
+.editor-celda-input::placeholder,
+.editor-celda-textarea::placeholder {
+    color: var(--text-4);
+    opacity: 1;
+}
+
+/* Botón eliminar fila */
+.editor-tabla td.col-acciones {
+    width: 36px;
+    text-align: center;
+    padding: var(--s-2) 0;
+}
+
+.editor-fila-borrar {
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-sm);
+    color: var(--text-4);
+    font-size: 14px;
+    transition: background var(--t-fast), color var(--t-fast);
+}
+
+.editor-fila-borrar:hover {
+    background: var(--accent-red-soft);
+    color: var(--accent-red);
+}
+
+.editor-fila-borrar:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.editor-fila-borrar.is-confirmando {
+    background: var(--accent-red-soft);
+    color: var(--accent-red);
+    width: auto;
+    padding: 0 var(--s-2);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+}
+
+/* Botón añadir fila */
+.editor-tabla-anadir {
+    margin-top: var(--s-3);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    padding: var(--s-2) var(--s-3);
+    background: transparent;
+    color: var(--text-3);
+    border: 1px dashed var(--border-2);
+    border-radius: var(--r-md);
+    font-size: 13px;
+    transition: color var(--t-fast), border-color var(--t-fast), background var(--t-fast);
+}
+
+.editor-tabla-anadir:hover {
+    color: var(--accent-green);
+    border-color: var(--accent-green);
+    background: var(--accent-green-soft);
+}
+
+.editor-tabla-anadir:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+
+/* =============================================================================
+   7 · BOTONES
+   ============================================================================= */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-2);
+    padding: var(--s-2) var(--s-4);
+    border-radius: var(--r-md);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast), opacity var(--t-fast);
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.btn:focus-visible {
+    outline: 2px solid var(--accent-blue);
+    outline-offset: 2px;
+}
+
+.btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* Primario */
+.btn-primary {
+    background: var(--accent-green);
+    color: var(--bg-0);
+    font-weight: 600;
+}
+.btn-primary:hover:not(:disabled) {
+    background: #0bbf78;
+}
+
+/* Secundario */
+.btn-secondary {
+    background: var(--bg-2);
+    color: var(--text-1);
+    border-color: var(--border-2);
+}
+.btn-secondary:hover:not(:disabled) {
+    background: var(--bg-3);
+    border-color: var(--border-3);
+}
+
+/* Ghost */
+.btn-ghost {
+    background: transparent;
+    color: var(--text-2);
+    border-color: var(--border-1);
+}
+.btn-ghost:hover:not(:disabled) {
+    background: var(--bg-2);
+    color: var(--text-1);
+}
+
+
+/* =============================================================================
+   8 · PANTALLAS AUXILIARES (boot, registro, error fatal)
+   ============================================================================= */
+.portada {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--s-6);
+    background: var(--bg-0);
+}
+
+.portada-card {
+    width: 100%;
+    max-width: 520px;
+    background: var(--bg-1);
+    border: 1px solid var(--border-1);
+    border-radius: var(--r-lg);
+    padding: var(--s-7);
+    box-shadow: var(--shadow-2);
+}
+
+.portada-eyebrow {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent-green);
+    margin-bottom: var(--s-3);
+    font-weight: 600;
+}
+
+.portada-title {
+    font-size: 22px;
+    color: var(--text-1);
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: var(--s-3);
+    letter-spacing: -0.01em;
+}
+
+.portada-sub {
+    color: var(--text-3);
+    font-size: 14px;
+    line-height: 1.55;
+    margin-bottom: var(--s-6);
+}
+
+.field-group {
+    margin-bottom: var(--s-4);
+}
+
+.field-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-3);
+    margin-bottom: var(--s-2);
+    font-weight: 500;
+}
+
+.field-input {
+    width: 100%;
+    background: var(--bg-2);
+    border: 1px solid var(--border-2);
+    border-radius: var(--r-md);
+    padding: var(--s-3) var(--s-4);
+    color: var(--text-1);
+    font-size: 14px;
+    transition: border-color var(--t-fast);
+}
+
+.field-input:focus {
+    border-color: var(--accent-blue);
+    outline: none;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+
+/* =============================================================================
+   9 · BANNER DE AVISO (lo usará la capa 8)
+   ============================================================================= */
+.banner-aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-3);
+    padding: var(--s-3) var(--s-5);
+    background: var(--accent-blue-soft);
+    border-bottom: 1px solid rgba(96, 165, 250, 0.3);
+    color: var(--text-2);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.banner-aviso-cerrar {
+    margin-left: auto;
+    color: var(--text-3);
+    padding: 2px var(--s-2);
+    border-radius: var(--r-sm);
+    transition: background var(--t-fast), color var(--t-fast);
+}
+
+.banner-aviso-cerrar:hover {
+    background: var(--bg-2);
+    color: var(--text-1);
+}
+
+
+/* =============================================================================
+   10 · RESPONSIVE
+   ============================================================================= */
+
+/* Tablet ancho / portátil pequeño: ajusta proporción a 36/64 */
+@media (max-width: 1100px) {
+    :root {
+        --col-left: 36%;
+        --col-right: 64%;
+    }
+}
+
+/* Tablet vertical y móvil: panel izquierdo se convierte en cajón */
+@media (max-width: 800px) {
+    :root {
+        --header-h: 56px;
+        --footer-h: 64px;
+    }
+
+    .workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .panel-left {
+        position: fixed;
+        top: var(--header-h);
+        bottom: var(--footer-h);
+        left: 0;
+        width: min(85vw, 480px);
+        z-index: 50;
+        border-right: 1px solid var(--border-1);
+        box-shadow: var(--shadow-2);
+        transform: translateX(-100%);
+        transition: transform var(--t-mid);
+    }
+
+    body.drawer-left-open .panel-left {
+        transform: translateX(0);
+    }
+
+    body.drawer-left-open::after {
+        content: '';
+        position: fixed;
+        inset: var(--header-h) 0 var(--footer-h) 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 40;
+    }
+
+    .topbar-mobile-toggle {
+        display: inline-flex !important;
+    }
+
+    .topbar-line-2 {
+        display: none;
+    }
+}
+
+.topbar-mobile-toggle {
+    display: none;
+    align-items: center;
+    gap: var(--s-2);
+    padding: var(--s-2) var(--s-3);
+    border-radius: var(--r-md);
+    border: 1px solid var(--border-2);
+    color: var(--text-2);
+    font-size: 12px;
+    transition: background var(--t-fast);
+}
+
+.topbar-mobile-toggle:hover {
+    background: var(--bg-2);
+}
+
+
+/* =============================================================================
+   11 · PRINT (capa 7 lo afinará para el PDF)
+   ============================================================================= */
+@media print {
+    /* Placeholder mínimo. La capa 7 reescribe esta sección con la hoja
+       de estilos completa para el PDF de entrega. */
+    body { background: white; color: black; }
+    .topbar, .footer, .panel-left, .editor-tabs { display: none; }
+}
+
+
+/* =============================================================================
+   12 · MODAL DE FEEDBACK MENTOR (capa 6C)
+   ============================================================================= */
+
+/* Backdrop oscurecido. Cubre toda la ventana con fade simple. */
+.fb-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: var(--s-4);
+    opacity: 0;
+    transition: opacity 0.12s ease;
+}
+
+.fb-backdrop.is-open {
+    display: flex;
+    opacity: 1;
+}
+
+/* Contenedor del modal. Ancho cómodo de lectura, scroll interno si excede. */
+.fb-modal {
+    background: var(--bg-1);
+    border: 1px solid var(--border-2);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-2);
+    width: 100%;
+    max-width: 720px;
+    max-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Cabecera del modal */
+.fb-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--s-3);
+    padding: var(--s-5) var(--s-6);
+    border-bottom: 1px solid var(--border-1);
+    flex-shrink: 0;
+}
+
+.fb-head-titulo {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-1);
+    letter-spacing: -0.005em;
+}
+
+.fb-head-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+}
+
+.fb-cerrar {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-sm);
+    color: var(--text-3);
+    font-size: 16px;
+    transition: background var(--t-fast), color var(--t-fast);
+    flex-shrink: 0;
+}
+
+.fb-cerrar:hover {
+    background: var(--bg-2);
+    color: var(--text-1);
+}
+
+.fb-cerrar:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Cuerpo scrollable */
+.fb-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--s-5) var(--s-6);
+}
+
+/* Aviso ámbar de feedback obsoleto */
+.fb-aviso-obsoleto {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-3);
+    padding: var(--s-3) var(--s-4);
+    background: var(--accent-amber-soft);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: var(--r-md);
+    color: var(--text-2);
+    font-size: 13px;
+    line-height: 1.55;
+    margin-bottom: var(--s-5);
+}
+
+.fb-aviso-obsoleto-icon {
+    color: var(--accent-amber);
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+/* Bloque de cada sección (diagnóstico, fortalezas, etc.) */
+.fb-bloque {
+    margin-bottom: var(--s-5);
+}
+
+.fb-bloque:last-child {
+    margin-bottom: 0;
+}
+
+.fb-bloque-titulo {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-3);
+    margin-bottom: var(--s-3);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+
+.fb-bloque-titulo.color-fortalezas { color: var(--accent-green); }
+.fb-bloque-titulo.color-mejorar    { color: var(--accent-amber); }
+.fb-bloque-titulo.color-recomendar { color: var(--accent-blue); }
+
+.fb-diagnostico {
+    color: var(--text-1);
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.fb-lista {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.fb-lista li {
+    position: relative;
+    padding: 0 0 var(--s-3) var(--s-5);
+    color: var(--text-2);
+    font-size: 13.5px;
+    line-height: 1.6;
+}
+
+.fb-lista li::before {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 9px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--text-4);
+}
+
+.fb-lista li:last-child {
+    padding-bottom: 0;
+}
+
+/* Disclaimer al final */
+.fb-disclaimer {
+    margin-top: var(--s-5);
+    padding-top: var(--s-4);
+    border-top: 1px dashed var(--border-1);
+    font-size: 12px;
+    color: var(--text-3);
+    line-height: 1.5;
+    font-style: italic;
+}
+
+/* Pie del modal con botones */
+.fb-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    padding: var(--s-4) var(--s-6);
+    border-top: 1px solid var(--border-1);
+    background: var(--bg-1);
+    flex-shrink: 0;
+}
+
+.fb-foot-meta {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-4);
+    letter-spacing: 0.02em;
+}
+
+.fb-foot-actions {
+    display: flex;
+    gap: var(--s-3);
+    margin-left: auto;
+}
+
+/* Estado de carga: mensaje dinámico en el cuerpo del modal */
+.fb-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--s-8) var(--s-6);
+    text-align: center;
+    min-height: 280px;
+}
+
+.fb-loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--border-1);
+    border-top-color: var(--accent-blue);
+    border-radius: 50%;
+    animation: fb-spin 0.9s linear infinite;
+    margin-bottom: var(--s-5);
+}
+
+@keyframes fb-spin {
+    to { transform: rotate(360deg); }
+}
+
+.fb-loading-msg {
+    color: var(--text-2);
+    font-size: 14px;
+    line-height: 1.5;
+    max-width: 440px;
+    margin-bottom: var(--s-3);
+    transition: opacity var(--t-mid);
+}
+
+.fb-loading-tiempo {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-4);
+    letter-spacing: 0.05em;
+}
+
+/* Estado de error */
+.fb-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: var(--s-7) var(--s-5);
+    min-height: 280px;
+}
+
+.fb-error-icon {
+    font-size: 28px;
+    color: var(--accent-red);
+    margin-bottom: var(--s-3);
+}
+
+.fb-error-codigo {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-4);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: var(--s-2);
+}
+
+.fb-error-mensaje {
+    color: var(--text-1);
+    font-size: 14.5px;
+    line-height: 1.55;
+    max-width: 460px;
+    margin-bottom: var(--s-5);
+}
+
+
+/* =============================================================================
+   FIN · styles.css · v6.0.0
+   ============================================================================= */
