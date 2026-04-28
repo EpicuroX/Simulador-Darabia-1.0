@@ -552,7 +552,8 @@
         const html = _construirHTML(estado);
 
         // Contenedor temporal off-screen para que html2pdf renderice
-        const contenedor = document.createElement('div');
+        contenedor.style.left = '0';
+        contenedor.style.opacity = '0';
         contenedor.style.position = 'absolute';
         contenedor.style.left = '-9999px';
         contenedor.style.top = '0';
@@ -567,7 +568,7 @@
             filename:     filename,
             image:        { type: 'jpeg', quality: 0.96 },
             html2canvas:  {
-                scale: 2,
+                scale: 1,
                 useCORS: true,
                 letterRendering: true,
                 logging: false
