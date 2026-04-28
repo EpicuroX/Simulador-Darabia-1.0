@@ -551,13 +551,21 @@
         // Construir HTML del documento
         const html = _construirHTML(estado);
 
-        // Contenedor temporal off-screen para que html2pdf renderice
+        // Contenedor temporal que html2canvas pueda renderizar.
+        // IMPORTANTE: NO usar `left: -9999px` ni `display:none` porque
+        // html2canvas no renderiza elementos fuera del viewport ni ocultos.
+        // Solución: contenedor visible con tamaño explícito A4 pero detrás
+        // de todo (z-index negativo) y opacidad 0 para no molestar al usuario.
         const contenedor = document.createElement('div');
-        contenedor.style.left = '0';
-        contenedor.style.opacity = '0';
-        contenedor.style.position = 'absolute';
-        contenedor.style.left = '-9999px';
+        contenedor.style.position = 'fixed';
         contenedor.style.top = '0';
+        contenedor.style.left = '0';
+        contenedor.style.width = '210mm';
+        contenedor.style.minHeight = '297mm';
+        contenedor.style.background = '#ffffff';
+        contenedor.style.zIndex = '-9999';
+        contenedor.style.opacity = '0';
+        contenedor.style.pointerEvents = 'none';
         contenedor.innerHTML = html;
         document.body.appendChild(contenedor);
 
@@ -569,7 +577,7 @@
             filename:     filename,
             image:        { type: 'jpeg', quality: 0.96 },
             html2canvas:  {
-                scale: 1,
+                scale: 2,
                 useCORS: true,
                 letterRendering: true,
                 logging: false
@@ -593,9 +601,19 @@
                 }
             }
         } finally {
-            // Limpiar contenedor temporal SIEMPRE (éxito o error)
-            if (contenedor.parentElement) {
-                contenedor.parentElement.removeChild(contenedor);
+            // Limpiar contenedor temporal SIEMPRE (éxito o error).
+            // Usamos contenedor.remove() que es más robusto que
+            // parentElement.removeChild — funciona aunque el padre
+            // haya cambiado y no lanza si ya estaba desmontado.
+            try {
+                if (contenedor && contenedor.remove) {
+                    contenedor.remove();
+                } else if (contenedor && contenedor.parentNode) {
+                    contenedor.parentNode.removeChild(contenedor);
+                }
+            } catch (_) {
+                // Ignorar fallos de limpieza: lo importante es no
+                // enmascarar el error original de la generación.
             }
         }
     }
