@@ -957,16 +957,72 @@
         node.textContent = String(completadas);
     }
 
-    /** Habilita/deshabilita el botón Feedback según haya algo escrito. */
+    /**
+     * Refresca el estado visual del botón "Pedir consejo" + el texto
+     * auxiliar bajo el botón.
+     *
+     * Tres estados (capa 6D-2):
+     *
+     *   A. Sin contenido suficiente (gatekeeper bloqueante):
+     *      - Botón deshabilitado, tooltip "Escribe al menos un párrafo..."
+     *      - Texto auxiliar OCULTO (no tiene sentido contar consultas
+     *        cuando aún no se puede pedir).
+     *
+     *   B. Con contenido y consultas restantes > 0:
+     *      - Botón habilitado.
+     *      - Texto auxiliar visible:
+     *          "Te quedan 2 consultas con Honás Darabia"
+     *          "Te queda 1 consulta con Honás Darabia"
+     *
+     *   C. Sin consultas restantes (=== 0):
+     *      - Botón DESHABILITADO (mismo aspecto, con disabled=true).
+     *      - Texto auxiliar visible:
+     *          "Las 2 consultas ya se han usado. El cierre técnico
+     *           se generará al pedir el PDF."
+     */
     function actualizarBotonFeedback() {
         const btn = $('#btn-feedback');
+        const aux = $('#footer-consultas-aux');
         if (!btn) return;
+
         const E = window.Darabia?.Evaluador;
-        const hayContenido = E?.tieneAlgoQueEvaluar?.() || false;
-        btn.disabled = !hayContenido;
-        btn.title = hayContenido
-            ? 'Solicitar feedback orientativo del mentor IA'
-            : 'Escribe algo en el dictamen para pedir feedback';
+        if (!E) return;
+
+        const hayContenido = E.tieneAlgoQueEvaluar?.() || false;
+        const restantes = E.consultasRestantes?.() ?? 2;
+
+        // Estado A: sin contenido (gatekeeper bloquea)
+        if (!hayContenido) {
+            btn.disabled = true;
+            btn.title = 'Escribe al menos un párrafo antes de consultar a Honás Darabia.';
+            if (aux) {
+                aux.textContent = '';
+                aux.classList.remove('is-visible', 'is-agotado');
+            }
+            return;
+        }
+
+        // Estado C: sin consultas restantes
+        if (restantes <= 0) {
+            btn.disabled = true;
+            btn.title = 'Ya has usado tus consultas. Genera el PDF para recibir el cierre técnico.';
+            if (aux) {
+                aux.textContent = 'Ya has usado tus 2 consultas. El cierre técnico se generará al pedir el PDF.';
+                aux.classList.add('is-visible', 'is-agotado');
+            }
+            return;
+        }
+
+        // Estado B: contenido OK + consultas disponibles
+        btn.disabled = false;
+        btn.title = 'Solicitar consejo de Honás Darabia';
+        if (aux) {
+            aux.textContent = restantes === 1
+                ? 'Te queda 1 consulta con Honás Darabia'
+                : `Te quedan ${restantes} consultas con Honás Darabia`;
+            aux.classList.add('is-visible');
+            aux.classList.remove('is-agotado');
+        }
     }
 
 
@@ -998,14 +1054,21 @@
             ),
             // Botones de acción global
             el('div', { class: 'footer-actions' },
-                el('button', {
-                    class: 'btn btn-secondary',
-                    id: 'btn-feedback',
-                    type: 'button',
-                    disabled: true,
-                    onclick: onClickFeedback,
-                    title: 'Disponible cuando hayas escrito algo en el dictamen'
-                }, '💬 Feedback'),
+                // Bloque del botón Pedir consejo (con texto auxiliar debajo)
+                el('div', { class: 'footer-consejo-bloque' },
+                    el('button', {
+                        class: 'btn btn-secondary',
+                        id: 'btn-feedback',
+                        type: 'button',
+                        disabled: true,
+                        onclick: onClickFeedback,
+                        title: 'Escribe al menos un párrafo antes de consultar a Honás Darabia.'
+                    }, '🕵️ Pedir consejo'),
+                    el('div', {
+                        class: 'footer-consultas-aux',
+                        id: 'footer-consultas-aux'
+                    }, '')   // se rellena dinámicamente
+                ),
                 el('button', {
                     class: 'btn btn-primary',
                     id: 'btn-pdf',
@@ -1025,9 +1088,597 @@
     }
 
     function onClickPDF() {
-        // Capa 7 implementa esto.
-        alert('La generación del PDF se implementa en la CAPA 7.');
+        // Capa 7: tres caminos posibles.
+        //   1. SIN cierre persistido           → ModalFriccionPDF
+        //   2. CON cierre · primera apertura   → ModalCierre (mostrar persistido)
+        //   3. CON cierre · ya visto y cerrado → generarPDF() directo
+        //
+        // El estado intermedio "ya he visto el cierre, ahora quiero el PDF"
+        // se marca con la propiedad _cierreYaMostrado del ModalCierre, que
+        // se activa al cerrar el modal del cierre por primera vez.
+        const E = window.Darabia?.Evaluador;
+        const cierre = E?.obtenerCierrePersistido?.() || null;
+
+        if (!cierre) {
+            // Camino 1: sin cierre → fricción
+            ModalFriccionPDF.abrir();
+            return;
+        }
+
+        if (!ModalCierre._cierreYaMostrado) {
+            // Camino 2: cierre persistido pero el alumno aún no lo ha visto
+            // (o ha recargado la página y no lo ha mirado tras la recarga).
+            ModalCierre.abrir();
+            return;
+        }
+
+        // Camino 3: alumno ya vio el cierre → generar PDF directo
+        generarPDF();
     }
+
+    /**
+     * Lanza la generación del PDF a través de PDFGenerator.
+     * Muestra ModalGenerandoPDF mientras se genera y captura errores.
+     */
+    async function generarPDF() {
+        const PG = window.Darabia?.PDFGenerator;
+        if (!PG || typeof PG.generar !== 'function') {
+            alert('El generador de PDF no está disponible. Recarga la página e inténtalo de nuevo.');
+            return;
+        }
+
+        ModalGenerandoPDF.abrir();
+        try {
+            await PG.generar();
+        } catch (err) {
+            console.error('[PDF] Error al generar:', err);
+            alert('No se ha podido generar el PDF. Recarga la página e inténtalo de nuevo.\n\nDetalle: ' + (err.message || err));
+        } finally {
+            ModalGenerandoPDF.cerrar();
+        }
+    }
+
+
+    /* ======================================================================
+       7.quater · MODAL DE GENERACIÓN DEL PDF (capa 7)
+       ======================================================================
+       Loading simple mientras html2pdf renderiza el documento. Sin
+       interacción del usuario: se abre antes de generar y se cierra
+       automáticamente cuando termina (éxito o error).
+       ====================================================================== */
+
+    const ModalGenerandoPDF = {
+        _backdrop: null,
+        _abierto: false,
+
+        abrir() {
+            if (this._abierto) return;
+            this._asegurarMontado();
+            this._abierto = true;
+            this._backdrop.classList.add('is-open');
+        },
+
+        cerrar() {
+            if (!this._abierto) return;
+            this._abierto = false;
+            if (this._backdrop) this._backdrop.classList.remove('is-open');
+        },
+
+        _asegurarMontado() {
+            if (this._backdrop) return;
+
+            const backdrop = el('div', {
+                class: 'pdfgen-backdrop',
+                id: 'pdfgen-backdrop'
+                // Sin onclick: este modal no se cierra manualmente.
+            });
+
+            const modal = el('div', { class: 'pdfgen-modal' },
+                el('div', { class: 'fb-spinner' }),
+                el('div', { class: 'pdfgen-msg' }, 'Generando PDF...')
+            );
+
+            backdrop.appendChild(modal);
+            document.body.appendChild(backdrop);
+            this._backdrop = backdrop;
+        }
+    };
+
+
+    /* ======================================================================
+       7.bis · MODAL DE FRICCIÓN PRE-PDF (capa 6E-2)
+       ======================================================================
+       Diálogo de decisión que se abre al pulsar "📄 Generar PDF" cuando el
+       alumno NO ha solicitado todavía el cierre técnico de Honás Darabia.
+
+       Pedagogía:
+         - No bloquea: el alumno puede seguir sin cierre.
+         - Refuerza la narrativa: cierre técnico = última revisión antes
+           de entregar.
+         - Fricción suave, no alarmista (sin ⚠️, sin dramatismo).
+
+       Este módulo es UN diálogo de decisión, no un panel de contenido.
+       Por eso es más pequeño que ModalFeedback (480px) y no comparte
+       contenido (loading, render, errores). Solo comparte el patrón
+       visual del backdrop y el sistema de focus/Esc/click-backdrop.
+       ====================================================================== */
+
+    const ModalFriccionPDF = {
+        _abierto: false,
+        _backdrop: null,
+        _onKeydown: null,
+
+        /**
+         * Abre el modal de fricción. Idempotente: si ya está abierto,
+         * no hace nada (cumple el requisito de "no permitir múltiples
+         * instancias").
+         */
+        abrir() {
+            if (this._abierto) return;
+            this._asegurarMontado();
+            this._abierto = true;
+
+            this._backdrop.classList.add('is-open');
+
+            // Deshabilitar botón "📄 Generar PDF" mientras el modal esté abierto
+            const btnPdf = $('#btn-pdf');
+            if (btnPdf) btnPdf.disabled = true;
+
+            // Esc cierra el modal
+            this._onKeydown = (e) => {
+                if (e.key === 'Escape') this.cerrar();
+            };
+            document.addEventListener('keydown', this._onKeydown);
+
+            // Focus al botón primario tras el repaint
+            setTimeout(() => {
+                const btn = $('#frix-btn-cierre');
+                if (btn) btn.focus();
+            }, 30);
+        },
+
+        cerrar() {
+            if (!this._abierto) return;
+            this._abierto = false;
+            this._backdrop.classList.remove('is-open');
+
+            const btnPdf = $('#btn-pdf');
+            if (btnPdf) btnPdf.disabled = false;
+
+            if (this._onKeydown) {
+                document.removeEventListener('keydown', this._onKeydown);
+                this._onKeydown = null;
+            }
+        },
+
+        /**
+         * Construye el DOM del modal una sola vez. En llamadas posteriores,
+         * reutiliza el nodo (igual patrón que ModalFeedback).
+         */
+        _asegurarMontado() {
+            if (this._backdrop) return;
+
+            const backdrop = el('div', {
+                class: 'frix-backdrop',
+                id: 'frix-backdrop',
+                onclick: (e) => {
+                    // Click fuera del modal → cerrar (no si el click es
+                    // sobre el contenido del modal en sí)
+                    if (e.target === backdrop) this.cerrar();
+                }
+            });
+
+            const modal = el('div', {
+                class: 'frix-modal',
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-labelledby': 'frix-titulo'
+            });
+
+            // Header (título + cerrar)
+            const head = el('div', { class: 'frix-head' },
+                el('div', { class: 'frix-titulo', id: 'frix-titulo' },
+                    '¿Generar PDF sin cierre técnico?'),
+                el('button', {
+                    class: 'frix-cerrar',
+                    type: 'button',
+                    'aria-label': 'Cerrar',
+                    title: 'Cerrar (Esc)',
+                    onclick: () => this.cerrar()
+                }, '×')
+            );
+
+            // Body (texto explicativo)
+            const body = el('div', { class: 'frix-body' },
+                el('p', { class: 'frix-texto' },
+                    'Vas a generar el dictamen sin la revisión final de ' +
+                    'Honás Darabia. Puedes continuar igualmente o solicitar ' +
+                    'el cierre técnico antes de entregar.')
+            );
+
+            // Footer con botones
+            const foot = el('div', { class: 'frix-foot' },
+                el('button', {
+                    class: 'btn btn-ghost',
+                    type: 'button',
+                    onclick: () => {
+                        // Capa 7: cierra fricción y genera PDF (sin anexo
+                        // de cierre técnico, porque el alumno no lo solicitó).
+                        this.cerrar();
+                        generarPDF();
+                    }
+                }, 'Generar PDF directamente'),
+                el('button', {
+                    class: 'btn btn-primary',
+                    id: 'frix-btn-cierre',
+                    type: 'button',
+                    onclick: () => {
+                        // Capa 6E-3: cierra fricción y abre modal de cierre.
+                        // ModalCierre.abrir() decide internamente si llama
+                        // a la API o muestra el persistido.
+                        this.cerrar();
+                        ModalCierre.abrir();
+                    }
+                }, '🕵️ Recibir cierre técnico')
+            );
+
+            modal.appendChild(head);
+            modal.appendChild(body);
+            modal.appendChild(foot);
+            backdrop.appendChild(modal);
+
+            document.body.appendChild(backdrop);
+            this._backdrop = backdrop;
+        }
+    };
+
+
+    /* ======================================================================
+       7.ter · MODAL DE CIERRE TÉCNICO (capa 6E-3)
+       ======================================================================
+       El cierre técnico es la 3ª y última intervención de Honás Darabia,
+       integradora, justo antes de generar el PDF.
+
+       Diferencias clave respecto a ModalFeedback:
+         - Solo se puede generar UNA vez por dictamen.
+         - No hay aviso de "obsoleto" (no se regenera).
+         - No hay botón "Actualizar".
+         - Subtítulo fijo: "Última revisión antes de la entrega del dictamen."
+         - Si ya hay cierre persistido al abrir → render directo (sin API).
+
+       Reutiliza estructuralmente las clases .fb-* (misma familia visual).
+       Usa la clase añadida .fbc-subtitulo para el subtítulo fijo.
+       ====================================================================== */
+
+    const ModalCierre = {
+
+        /* === Estado interno (lazy-mounted) === */
+        _backdrop: null,
+        _bodyNode: null,
+        _footNode: null,
+        _headSubtitulo: null,
+        _btnCerrar: null,
+        _onKeydown: null,
+        _abierto: false,
+        _cargando: false,
+        _timersLoading: [],
+
+        /**
+         * Flag de capa 7: indica si el alumno ya ha cerrado el modal de
+         * cierre al menos una vez (es decir, ya ha leído el cierre).
+         * Tras esto, futuros clicks en "Generar PDF" lanzan directamente
+         * la generación del PDF sin volver a abrir este modal.
+         */
+        _cierreYaMostrado: false,
+
+        /**
+         * Abre el modal del cierre técnico.
+         *   - Si hay cierre persistido → render directo, sin llamar a la API.
+         *   - Si no → dispara solicitarCierreTecnico() y renderiza la respuesta.
+         */
+        async abrir() {
+            this._asegurarMontado();
+            this._abierto = true;
+            this._backdrop.classList.add('is-open');
+
+            // Deshabilitar el botón "📄 Generar PDF" mientras el modal
+            // esté abierto (mismo patrón que ModalFeedback con Pedir consejo).
+            const btnPdf = $('#btn-pdf');
+            if (btnPdf) btnPdf.disabled = true;
+
+            // Esc cierra el modal SALVO durante loading
+            this._onKeydown = (e) => {
+                if (e.key === 'Escape' && !this._cargando) this.cerrar();
+            };
+            document.addEventListener('keydown', this._onKeydown);
+
+            const E = window.Darabia?.Evaluador;
+            if (!E) {
+                this._renderError({
+                    codigo: 'API_ERROR',
+                    mensaje: 'Motor no disponible.'
+                }, false);
+                return;
+            }
+
+            const persistido = E.obtenerCierrePersistido();
+            if (persistido) {
+                // Ya hay cierre técnico → render directo, sin gastar API.
+                this._renderCierre(persistido);
+            } else {
+                // No hay cierre todavía → solicitar.
+                await this._solicitarYRenderizar();
+            }
+        },
+
+        /** Cierra el modal. Bloqueado durante loading. */
+        cerrar() {
+            if (!this._abierto || this._cargando) return;
+            this._abierto = false;
+            this._backdrop.classList.remove('is-open');
+
+            // Capa 7: marcar que el alumno ya ha visto el cierre.
+            // Tras esto, onClickPDF irá directo a generar PDF.
+            this._cierreYaMostrado = true;
+
+            const btnPdf = $('#btn-pdf');
+            if (btnPdf) btnPdf.disabled = false;
+
+            if (this._onKeydown) {
+                document.removeEventListener('keydown', this._onKeydown);
+                this._onKeydown = null;
+            }
+
+            this._limpiarTimersLoading();
+        },
+
+        /**
+         * Construye el DOM del modal una sola vez (lazy-mount).
+         * Reutiliza las clases .fb-* del modal de feedback para
+         * coherencia visual + clase específica .fbc-subtitulo.
+         */
+        _asegurarMontado() {
+            if (this._backdrop) return;
+
+            const backdrop = el('div', {
+                class: 'fb-backdrop fbc-backdrop',
+                id: 'fbc-backdrop',
+                onclick: (e) => {
+                    if (e.target === backdrop && !this._cargando) this.cerrar();
+                }
+            });
+
+            const modal = el('div', {
+                class: 'fb-modal',
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-labelledby': 'fbc-titulo'
+            });
+
+            // Cabecera
+            const head = el('div', { class: 'fb-head' },
+                el('div', null,
+                    el('div', {
+                        class: 'fb-head-titulo',
+                        id: 'fbc-titulo'
+                    }, '📄 Cierre técnico de Honás Darabia'),
+                    el('div', {
+                        class: 'fbc-subtitulo',
+                        id: 'fbc-subtitulo'
+                    }, 'Última revisión antes de la entrega del dictamen.')
+                ),
+                el('button', {
+                    class: 'fb-cerrar',
+                    id: 'fbc-cerrar',
+                    type: 'button',
+                    'aria-label': 'Cerrar',
+                    title: 'Cerrar (Esc)',
+                    onclick: () => this.cerrar()
+                }, '×')
+            );
+
+            // Cuerpo (se rellena dinámicamente en loading/cierre/error)
+            const body = el('div', { class: 'fb-body', id: 'fbc-body' });
+
+            // Pie (se rellena dinámicamente)
+            const foot = el('div', { class: 'fb-foot', id: 'fbc-foot' });
+
+            modal.appendChild(head);
+            modal.appendChild(body);
+            modal.appendChild(foot);
+            backdrop.appendChild(modal);
+            document.body.appendChild(backdrop);
+
+            this._backdrop = backdrop;
+            this._bodyNode = body;
+            this._footNode = foot;
+            this._headSubtitulo = $('#fbc-subtitulo');
+            this._btnCerrar = $('#fbc-cerrar');
+        },
+
+        /**
+         * Llama a Evaluador.solicitarCierreTecnico(), gestiona loading
+         * y errores. Mismo patrón que ModalFeedback._solicitarYRenderizar()
+         * pero llamando al método de cierre y silenciando PETICION_EN_CURSO.
+         */
+        async _solicitarYRenderizar() {
+            this._renderLoading();
+            this._cargando = true;
+            this._btnCerrar.disabled = true;
+
+            try {
+                const data = await window.Darabia.Evaluador.solicitarCierreTecnico();
+                this._cargando = false;
+                this._btnCerrar.disabled = false;
+                this._limpiarTimersLoading();
+                this._renderCierre(data);
+            } catch (err) {
+                // Silenciar PETICION_EN_CURSO (mismo patrón que ModalFeedback):
+                // si pasa, hay otra solicitud activa y no debemos pisarla.
+                if (err?.codigo === 'PETICION_EN_CURSO') {
+                    return;
+                }
+
+                this._cargando = false;
+                this._btnCerrar.disabled = false;
+                this._limpiarTimersLoading();
+
+                const reintentable = ['LIMITE_CUOTA', 'TIMEOUT_API', 'RED_ERROR', 'API_ERROR']
+                    .includes(err.codigo);
+                this._renderError(err, reintentable);
+            }
+        },
+
+        /* ======== RENDER LOADING (con mensajes incrementales) ======== */
+
+        _renderLoading() {
+            // Vaciar pie (sin botones durante loading)
+            this._footNode.innerHTML = '';
+
+            this._bodyNode.innerHTML = '';
+            const cont = el('div', { class: 'fb-loading' },
+                el('div', { class: 'fb-spinner' }),
+                el('div', {
+                    class: 'fb-loading-msg',
+                    id: 'fbc-loading-msg'
+                }, 'Conectando con Honás Darabia...')
+            );
+            this._bodyNode.appendChild(cont);
+
+            // Mensajes incrementales (mismo patrón que feedback,
+            // segundo mensaje específico del cierre).
+            const mensajes = [
+                { t: 3000,  txt: 'Honás Darabia está revisando el dictamen completo...' },
+                { t: 15000, txt: 'Esto está tardando un poco...' },
+                { t: 25000, txt: 'Anthropic tarda más de lo habitual. Aguanta unos segundos más...' }
+            ];
+
+            this._limpiarTimersLoading();
+            for (const { t, txt } of mensajes) {
+                const id = setTimeout(() => {
+                    const node = $('#fbc-loading-msg');
+                    if (node) node.textContent = txt;
+                }, t);
+                this._timersLoading.push(id);
+            }
+        },
+
+        _limpiarTimersLoading() {
+            for (const id of this._timersLoading) clearTimeout(id);
+            this._timersLoading = [];
+        },
+
+        /* ======== RENDER DEL CIERRE (4 bloques) ======== */
+
+        _renderCierre(data) {
+            this._bodyNode.innerHTML = '';
+
+            // Bloque 1: Diagnóstico general (corazón del cierre, 1-2 párrafos)
+            this._bodyNode.appendChild(this._bloqueDiagnostico(data.diagnostico_general));
+
+            // Bloque 2: Fortalezas (puede ser [])
+            if (Array.isArray(data.fortalezas) && data.fortalezas.length > 0) {
+                this._bodyNode.appendChild(this._bloqueLista(
+                    'Fortalezas', data.fortalezas, 'fortalezas'));
+            }
+
+            // Bloque 3: Aspectos a mejorar
+            if (Array.isArray(data.aspectos_a_mejorar) && data.aspectos_a_mejorar.length > 0) {
+                this._bodyNode.appendChild(this._bloqueLista(
+                    'Aspectos a mejorar', data.aspectos_a_mejorar, 'mejora'));
+            }
+
+            // Bloque 4: Recomendaciones
+            if (Array.isArray(data.recomendaciones) && data.recomendaciones.length > 0) {
+                this._bodyNode.appendChild(this._bloqueLista(
+                    'Recomendaciones', data.recomendaciones, 'recomendacion'));
+            }
+
+            // Disclaimer
+            this._bodyNode.appendChild(el('div', { class: 'fb-disclaimer' },
+                'Este cierre técnico es orientativo. La evaluación oficial corresponde al profesorado.'
+            ));
+
+            // Pie con SOLO botón "Cerrar" (cierre no se regenera)
+            this._footNode.innerHTML = '';
+            this._footNode.appendChild(el('div', { class: 'fb-foot-actions' },
+                el('button', {
+                    class: 'btn btn-primary',
+                    type: 'button',
+                    onclick: () => this.cerrar()
+                }, 'Cerrar')
+            ));
+        },
+
+        _bloqueDiagnostico(texto) {
+            return el('div', { class: 'fb-bloque' },
+                el('div', { class: 'fb-bloque-titulo' }, 'Diagnóstico general'),
+                el('div', { class: 'fb-bloque-diagnostico' },
+                    String(texto || '').trim() || '(sin diagnóstico)')
+            );
+        },
+
+        _bloqueLista(titulo, items, tipo) {
+            const ul = el('ul', { class: `fb-lista fb-lista-${tipo}` });
+            for (const item of items) {
+                ul.appendChild(el('li', { class: 'fb-lista-item' },
+                    String(item || '').trim()));
+            }
+            return el('div', { class: 'fb-bloque' },
+                el('div', { class: 'fb-bloque-titulo' }, titulo),
+                ul
+            );
+        },
+
+        /* ======== RENDER DE ERROR ======== */
+
+        _renderError(err, reintentable) {
+            this._bodyNode.innerHTML = '';
+            this._footNode.innerHTML = '';
+
+            const codigo = err.codigo || 'ERROR';
+            const mensaje = err.mensaje || err.message || 'Error desconocido.';
+
+            // Mensajes humanizados (cierre técnico — sin SIN_CONSULTAS_DISPONIBLES
+            // porque el cierre NO usa el contador de consultas iterativas).
+            const mensajesHumanos = {
+                NADA_QUE_EVALUAR:         'Escribe al menos un párrafo antes de solicitar el cierre técnico.',
+                LIMITE_CUOTA:             'El servicio está saturado. Espera 1-2 minutos y reintenta.',
+                SIN_SALDO:                'La cuenta de la API está sin saldo. Avisa a tu profesor.',
+                TIMEOUT_API:              'Honás Darabia tarda demasiado en responder. Reintenta en unos segundos.',
+                RESPUESTA_INVALIDA:       'Honás Darabia ha devuelto una respuesta mal formada. Reintenta.',
+                RED_ERROR:                'Error de red. Comprueba tu conexión y reintenta.',
+                DICTAMEN_DEMASIADO_LARGO: 'Tu dictamen es demasiado extenso. Reduce su longitud antes de pedir el cierre técnico.',
+                API_ERROR:                'Ha ocurrido un error inesperado al contactar con Honás Darabia.'
+            };
+            const textoFinal = mensajesHumanos[codigo] || mensaje;
+
+            this._bodyNode.appendChild(
+                el('div', { class: 'fb-error' },
+                    el('div', { class: 'fb-error-icon' }, '✕'),
+                    el('div', { class: 'fb-error-codigo' }, codigo),
+                    el('div', { class: 'fb-error-mensaje' }, textoFinal)
+                )
+            );
+
+            const acciones = el('div', { class: 'fb-foot-actions' });
+            acciones.appendChild(el('button', {
+                class: 'btn btn-ghost',
+                type: 'button',
+                onclick: () => this.cerrar()
+            }, 'Cerrar'));
+
+            if (reintentable) {
+                acciones.appendChild(el('button', {
+                    class: 'btn btn-primary',
+                    type: 'button',
+                    onclick: () => this._solicitarYRenderizar()
+                }, 'Reintentar'));
+            }
+
+            this._footNode.appendChild(acciones);
+        }
+    };
 
 
     /* ======================================================================
@@ -1076,7 +1727,7 @@
 
             const head = el('div', { class: 'fb-head' },
                 el('div', null,
-                    el('div', { class: 'fb-head-titulo' }, 'Feedback orientativo'),
+                    el('div', { class: 'fb-head-titulo' }, '🕵️ Consejo de Honás Darabia'),
                     el('div', { class: 'fb-head-meta', id: 'fb-head-meta' }, '')
                 ),
                 el('button', {
@@ -1183,6 +1834,16 @@
                 // Tras una solicitud nueva, el feedback NO está obsoleto
                 this._renderFeedback(data, false);
             } catch (err) {
+                // Caso especial · capa 6D-2: silenciar PETICION_EN_CURSO.
+                // Esto pasa cuando el alumno hace doble click rapidísimo: la
+                // 1ª llamada está en curso y la 2ª llega aquí. El loading
+                // que estamos viendo es el de la 1ª llamada (que sigue su
+                // curso). No tiene sentido mostrar pantalla de error sobre
+                // un loading legítimo. Salimos sin tocar nada.
+                if (err?.codigo === 'PETICION_EN_CURSO') {
+                    return;
+                }
+
                 this._cargando = false;
                 this._btnCerrar.disabled = false;
                 this._limpiarTimersLoading();
@@ -1203,7 +1864,7 @@
             this._bodyNode.innerHTML = '';
             const spinner = el('div', { class: 'fb-loading-spinner' });
             const msg = el('div', { class: 'fb-loading-msg', id: 'fb-loading-msg' },
-                'Conectando con el mentor...');
+                'Conectando con Honás Darabia...');
             const tiempo = el('div', { class: 'fb-loading-tiempo', id: 'fb-loading-tiempo' },
                 '0s');
             const wrap = el('div', { class: 'fb-loading' }, spinner, msg, tiempo);
@@ -1212,7 +1873,7 @@
             // Mensajes incrementales según el plan que validaste
             this._limpiarTimersLoading();
             const mensajes = [
-                { t: 3000,  txt: 'El mentor está analizando tu dictamen...' },
+                { t: 3000,  txt: 'Honás Darabia está analizando tu dictamen...' },
                 { t: 15000, txt: 'Esto está tardando un poco. Sigue ahí, no se ha colgado.' },
                 { t: 25000, txt: 'Anthropic tarda más de lo habitual. Si tarda mucho más, podrás reintentar.' }
             ];
@@ -1270,7 +1931,7 @@
                 this._bodyNode.appendChild(el('div', { class: 'fb-aviso-obsoleto' },
                     el('span', { class: 'fb-aviso-obsoleto-icon' }, '⚠'),
                     el('span', null,
-                        'Tu dictamen ha cambiado desde este feedback. Considera actualizarlo para reflejar el contenido actual.'
+                        'Tu dictamen ha cambiado desde este consejo. Considera actualizarlo para reflejar el contenido actual.'
                     )
                 ));
             }
@@ -1298,13 +1959,13 @@
 
             // Disclaimer
             this._bodyNode.appendChild(el('div', { class: 'fb-disclaimer' },
-                'Este feedback es orientativo. La evaluación oficial corresponde al profesorado.'
+                'Este consejo es orientativo. La evaluación oficial corresponde al profesorado.'
             ));
 
             // Pie con botones
             this._footNode.innerHTML = '';
             this._footNode.appendChild(el('div', { class: 'fb-foot-meta' },
-                obsoleto ? 'Feedback desactualizado' : 'Feedback actualizado'
+                obsoleto ? 'Consejo desactualizado' : 'Consejo actualizado'
             ));
             this._footNode.appendChild(el('div', { class: 'fb-foot-actions' },
                 el('button', {
@@ -1316,7 +1977,7 @@
                     class: 'btn btn-primary',
                     type: 'button',
                     onclick: () => this._solicitarYRenderizar()
-                }, 'Actualizar feedback')
+                }, 'Actualizar consejo')
             ));
         },
 
@@ -1351,14 +2012,15 @@
 
             // Mensaje humanizado por código (sobreescribe el mensaje crudo del backend)
             const mensajesHumanos = {
-                NADA_QUE_EVALUAR:        'Escribe al menos un párrafo en alguna sección antes de pedir feedback.',
-                LIMITE_CUOTA:            'El servicio está saturado. Espera 1-2 minutos y reintenta.',
-                SIN_SALDO:               'La cuenta de la API está sin saldo. Avisa a tu profesor.',
-                TIMEOUT_API:             'El mentor tarda demasiado en responder. Reintenta en unos segundos.',
-                RESPUESTA_INVALIDA:      'El mentor devolvió una respuesta mal formada. Reintenta.',
-                RED_ERROR:               'Error de red. Comprueba tu conexión y reintenta.',
-                DICTAMEN_DEMASIADO_LARGO:'Tu dictamen es demasiado extenso. Reduce su longitud antes de pedir feedback.',
-                API_ERROR:               'Ha ocurrido un error inesperado al contactar con el mentor.'
+                NADA_QUE_EVALUAR:         'Escribe al menos un párrafo antes de consultar a Honás Darabia.',
+                SIN_CONSULTAS_DISPONIBLES:'Has consumido las 2 consultas con Honás Darabia. El cierre técnico se generará al pedir el PDF.',
+                LIMITE_CUOTA:             'El servicio está saturado. Espera 1-2 minutos y reintenta.',
+                SIN_SALDO:                'La cuenta de la API está sin saldo. Avisa a tu profesor.',
+                TIMEOUT_API:              'Honás Darabia tarda demasiado en responder. Reintenta en unos segundos.',
+                RESPUESTA_INVALIDA:       'Honás Darabia ha devuelto una respuesta mal formada. Reintenta.',
+                RED_ERROR:                'Error de red. Comprueba tu conexión y reintenta.',
+                DICTAMEN_DEMASIADO_LARGO: 'Tu dictamen es demasiado extenso. Reduce su longitud antes de pedir consejo.',
+                API_ERROR:                'Ha ocurrido un error inesperado al contactar con Honás Darabia.'
             };
             const textoFinal = mensajesHumanos[codigo] || mensaje;
 
