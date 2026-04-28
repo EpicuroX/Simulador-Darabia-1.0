@@ -552,6 +552,7 @@
         const html = _construirHTML(estado);
 
         // Contenedor temporal off-screen para que html2pdf renderice
+        const contenedor = document.createElement('div');
         contenedor.style.left = '0';
         contenedor.style.opacity = '0';
         contenedor.style.position = 'absolute';
