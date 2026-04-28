@@ -2,16 +2,27 @@
  * pdf_generator.js · Capa 7 · Generación del PDF del dictamen
  * ============================================================================
  *
- * Genera un PDF profesional siguiendo la estructura del DOCX de plantilla:
+ * Estrategia: window.print() del navegador.
+ *
+ * Por qué NO usamos html2pdf / html2canvas:
+ *   - html2canvas tiene quirks con elementos off-screen.
+ *   - El PDF resultante es una imagen, no texto seleccionable.
+ *   - Más bugs por fuentes, scale, viewport.
+ *
+ * Lo que hace este módulo:
+ *   1. Construye el HTML completo del dictamen.
+ *   2. Abre una ventana nueva con ese HTML y estilos inline.
+ *   3. Espera al load completo de la ventana.
+ *   4. Lanza window.print() en la ventana nueva.
+ *   5. El navegador ofrece "Guardar como PDF" en el diálogo de impresión.
+ *
+ * Estructura del documento (sin cambios respecto a versión anterior):
  *   - Cabecera profesional con expediente
  *   - Aviso técnico breve
- *   - Dictamen (secciones 1 a 6)
+ *   - Dictamen (secciones 1-6) con la tabla del plan
  *   - Firma del técnico
  *   - ANEXO Cierre técnico (solo si existe en gameState)
  *   - Footer estático profesional
- *
- * Dependencia: html2pdf.js (cargada vía CDN en index.html).
- * Estado: window.html2pdf disponible globalmente.
  *
  * Punto de entrada: window.Darabia.PDFGenerator.generar()
  * ============================================================================ */
@@ -25,7 +36,10 @@
     const TEC_NUMERO = '0847';
     const TEC_NOMBRE = 'Honás Darabia';
 
-    /** Limpia emojis del texto del alumno (no se renderizan bien en PDF). */
+    /* ====================================================================
+     *  HELPERS DE LIMPIEZA Y FORMATO
+     *  ==================================================================== */
+
     function _limpiarEmojis(texto) {
         if (!texto) return '';
         return String(texto)
@@ -42,7 +56,6 @@
             .replace(/[\u{2700}-\u{27BF}]/gu, '');
     }
 
-    /** Escapa HTML para seguridad y consistencia visual. */
     function _esc(texto) {
         const limpio = _limpiarEmojis(texto);
         return String(limpio || '')
@@ -53,7 +66,6 @@
             .replace(/'/g, '&#39;');
     }
 
-    /** Convierte texto plano con saltos de línea a HTML con <br>. */
     function _textoMultilinea(texto) {
         if (!texto || !texto.trim()) {
             return '<p class="pdf-vacia">[Sección no redactada]</p>';
@@ -64,23 +76,13 @@
             .join('');
     }
 
-    /** Formato de fecha legible: "27 de abril de 2026". */
     function _formatearFecha(d = new Date()) {
         const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
                        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
         return `${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
     }
 
-    /** Devuelve "Apellido_Nombre" sin caracteres problemáticos. */
-    function _slugNombre(nombre) {
-        if (!nombre) return 'Alumno';
-        return String(nombre)
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            .replace(/\s+/g, '_')
-            .replace(/[^a-zA-Z0-9_]/g, '');
-    }
-
-    /** ====================================================================
+    /* ====================================================================
      *  CONSTRUCCIÓN DE BLOQUES HTML
      *  ==================================================================== */
 
@@ -137,7 +139,6 @@
 
     function _construirTablaPlan(seccion) {
         const filas = (seccion?.filas || []).filter(f => {
-            // Filtrar filas completamente vacías
             const valores = Object.entries(f).filter(([k]) => k !== 'id');
             return valores.some(([_, v]) => String(v || '').trim().length > 0);
         });
@@ -183,9 +184,6 @@
     }
 
     function _construirSeccionArgumentacion(contenidoLegal, contenidoEconomico) {
-        // Si la sección 06 está unificada en un solo texto, intentamos
-        // partir por el patrón típico "6.1" / "6.2" / "Económica". Si no,
-        // se imprime como texto único y bajo "6.1".
         return `
         <section class="pdf-seccion">
             <h3>6. Argumentación ante la dirección</h3>
@@ -220,18 +218,16 @@
 
     function _construirAnexoCierre(cierre) {
         if (!cierre) return '';
-
         return `
-        <div class="html2pdf__page-break"></div>
         <section class="pdf-anexo">
-            <h2>ANEXO · Cierre técnico</h2>
+            <h2>ANEXO &middot; Cierre t&eacute;cnico</h2>
             <p class="pdf-anexo-meta">
-                Revisión técnica realizada en el simulador Darabia con fines
-                formativos. Carácter orientativo.
+                Revisi&oacute;n t&eacute;cnica realizada en el simulador Darabia
+                con fines formativos. Car&aacute;cter orientativo.
             </p>
 
             <div class="pdf-anexo-bloque">
-                <h4>Diagnóstico general</h4>
+                <h4>Diagn&oacute;stico general</h4>
                 <p>${_esc(cierre.diagnostico_general || '')}</p>
             </div>
 
@@ -244,31 +240,36 @@
     function _construirFooter() {
         return `
         <footer class="pdf-footer">
-            ${TEC_NOMBRE} · Téc. PRL nº ${TEC_NUMERO} ·
-            ${CENTRO} · ${CURSO}
+            ${TEC_NOMBRE} &middot; T&eacute;c. PRL n&ordm; ${TEC_NUMERO} &middot;
+            ${CENTRO} &middot; ${CURSO}
         </footer>`;
     }
 
-    /** ====================================================================
-     *  CSS DEL PDF (inline para que html2pdf lo capture sin dudas)
+    /* ====================================================================
+     *  CSS DEL DOCUMENTO (inyectado en la ventana de impresión)
      *  ==================================================================== */
 
-    function _construirEstilosInline() {
+    function _construirEstilos() {
         return `
         <style>
             * { box-sizing: border-box; }
 
-            .pdf-document {
+            body {
                 font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
                 font-size: 11pt;
                 line-height: 1.5;
                 color: #1a1a1a;
                 background: #ffffff;
-                padding: 28mm 22mm 22mm 22mm;
-                width: 210mm;
+                margin: 0;
+                padding: 0;
             }
 
-            /* Cabecera */
+            .pdf-document {
+                max-width: 180mm;
+                margin: 0 auto;
+                padding: 18mm 0;
+            }
+
             .pdf-cabecera-tabla {
                 width: 100%;
                 border-collapse: collapse;
@@ -290,7 +291,6 @@
             }
             .pdf-cab-valor { font-size: 10.5pt; }
 
-            /* Aviso técnico */
             .pdf-aviso {
                 font-style: italic;
                 color: #555;
@@ -302,7 +302,6 @@
                 margin-bottom: 28px;
             }
 
-            /* Cuerpo del dictamen */
             .pdf-cuerpo h1 {
                 font-size: 18pt;
                 font-weight: 700;
@@ -315,7 +314,7 @@
                 color: #555;
                 margin: 0 0 24px 0;
             }
-            .pdf-seccion { margin-bottom: 22px; page-break-inside: auto; }
+            .pdf-seccion { margin-bottom: 22px; }
             .pdf-seccion h3 {
                 font-size: 12.5pt;
                 font-weight: 700;
@@ -331,14 +330,12 @@
             }
             .pdf-seccion p { margin: 0 0 8px 0; }
 
-            /* Sección vacía */
             .pdf-vacia {
                 color: #aaaaaa;
                 font-style: italic;
                 font-size: 10pt;
             }
 
-            /* Tabla del plan */
             .pdf-tabla-plan {
                 width: 100%;
                 border-collapse: collapse;
@@ -366,7 +363,6 @@
                 color: #666;
             }
 
-            /* Firma */
             .pdf-firma {
                 margin-top: 32px;
                 padding-top: 14px;
@@ -385,13 +381,13 @@
             }
             .pdf-firma-firma { margin-top: 22px; }
 
-            /* Anexo Cierre técnico */
             .pdf-anexo {
                 margin-top: 8px;
                 padding: 22px 24px;
                 background: #f7f7f9;
                 border-left: 4px solid #888;
                 border-radius: 2px;
+                page-break-before: always;
             }
             .pdf-anexo h2 {
                 font-size: 14pt;
@@ -426,7 +422,6 @@
                 line-height: 1.45;
             }
 
-            /* Footer */
             .pdf-footer {
                 margin-top: 28px;
                 padding-top: 10px;
@@ -436,17 +431,62 @@
                 text-align: center;
                 letter-spacing: 0.02em;
             }
+
+            @page {
+                size: A4;
+                margin: 18mm 16mm;
+            }
+
+            @media print {
+                body { background: white; }
+                .pdf-document {
+                    max-width: none;
+                    padding: 0;
+                }
+                .pdf-anexo { page-break-before: always; }
+                .pdf-tabla-plan tr { page-break-inside: avoid; }
+                .pdf-anexo-bloque { page-break-inside: avoid; }
+                .pdf-aviso-pantalla { display: none !important; }
+            }
+
+            /* Aviso visible solo en pantalla (no en el PDF impreso) */
+            .pdf-aviso-pantalla {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                background: #1f2a3a;
+                color: white;
+                padding: 12px 20px;
+                font-size: 13px;
+                font-family: system-ui, sans-serif;
+                z-index: 9999;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            }
+            .pdf-aviso-pantalla button {
+                background: #10d98a;
+                color: #0a0f1a;
+                border: 0;
+                padding: 8px 16px;
+                font-weight: 600;
+                font-size: 13px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-family: inherit;
+                white-space: nowrap;
+            }
+            .pdf-aviso-pantalla button:hover { background: #0bbd75; }
         </style>`;
     }
 
-    /** ====================================================================
-     *  ENSAMBLAJE COMPLETO + GENERACIÓN
+    /* ====================================================================
+     *  ENSAMBLAJE DE LA VENTANA DE IMPRESIÓN
      *  ==================================================================== */
 
-    /**
-     * Localiza el contenido de una sección por id en gameState.dictamen.secciones.
-     * Las secciones se almacenan como objeto indexado por id.
-     */
     function _seccion(estado, id) {
         return estado?.dictamen?.secciones?.[id] || null;
     }
@@ -456,15 +496,9 @@
         return s?.contenido || '';
     }
 
-    /**
-     * La sección 06 (argumentación) se almacena como un solo bloque de texto
-     * libre. Para presentarla con subsecciones 6.1 y 6.2 en el PDF, intentamos
-     * partir por marcadores típicos. Si no encontramos partición, todo va a 6.1.
-     */
     function _partirArgumentacion(texto) {
         if (!texto || !texto.trim()) return { legal: '', economico: '' };
 
-        // Patrones típicos del alumno
         const patrones = [
             /\n\s*6\.2[^\n]*\n/i,
             /\n\s*Econ[oó]mic[ao][^\n]*\n/i,
@@ -485,21 +519,18 @@
         return { legal: texto.trim(), economico: '' };
     }
 
-    function _construirHTML(estado) {
+    function _construirCuerpoHTML(estado) {
         const alumno = estado?.alumno || {};
         const cierre = estado?.dictamen?.cierre_tecnico || null;
-
         const arg = _partirArgumentacion(_textoSeccion(estado, '06_argumentacion'));
 
         return `
-        ${_construirEstilosInline()}
-        <div class="pdf-document">
             ${_construirCabecera(alumno)}
             ${_construirAviso()}
 
             <main class="pdf-cuerpo">
-                <h1>DICTAMEN TÉCNICO PSICOSOCIAL</h1>
-                <h2 class="pdf-empresa">Gestoría Moreno &amp; Asociados S.L.</h2>
+                <h1>DICTAMEN T&Eacute;CNICO PSICOSOCIAL</h1>
+                <h2 class="pdf-empresa">Gestor&iacute;a Moreno &amp; Asociados S.L.</h2>
 
                 ${_construirSeccionTexto(1, 'Unidades de análisis',
                     _textoSeccion(estado, '01_unidades_analisis'))}
@@ -522,103 +553,91 @@
 
             ${_construirAnexoCierre(cierre)}
 
-            ${_construirFooter()}
-        </div>`;
+            ${_construirFooter()}`;
     }
 
-    /** ====================================================================
-     *  PUNTO DE ENTRADA · GENERAR PDF
+    function _construirDocumentoCompleto(estado) {
+        const alumno = estado?.alumno || {};
+        const titulo = `Dictamen ${EXPEDIENTE} - ${alumno.nombre || 'Alumno'}`;
+
+        return `<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${_esc(titulo)}</title>
+    ${_construirEstilos()}
+</head>
+<body>
+    <div class="pdf-aviso-pantalla">
+        <span>Para guardar como PDF, pulsa el bot&oacute;n o usa Ctrl/Cmd + P y elige &laquo;Guardar como PDF&raquo;.</span>
+        <button type="button" onclick="window.print();">Imprimir / Guardar PDF</button>
+    </div>
+
+    <div class="pdf-document" style="padding-top: 60px;">
+        ${_construirCuerpoHTML(estado)}
+    </div>
+
+    <script>
+        // Lanza el diálogo de impresión automáticamente al cargar.
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                try { window.print(); } catch (e) { /* ignorar */ }
+            }, 300);
+        });
+    </script>
+</body>
+</html>`;
+    }
+
+    /* ====================================================================
+     *  PUNTO DE ENTRADA · GENERAR
      *  ==================================================================== */
 
     /**
-     * Genera el PDF del dictamen y lanza la descarga en el navegador.
-     * Marca timestamp en gameState.dictamen.pdf_generado_at tras éxito.
+     * Genera el PDF abriendo una ventana nueva con el dictamen y disparando
+     * window.print() en ella. El usuario verá el diálogo nativo de impresión
+     * del navegador y podrá elegir "Guardar como PDF".
      *
      * @returns {Promise<void>}
-     * @throws si html2pdf no está cargado o si la generación falla.
+     * @throws si el navegador bloquea la ventana popup.
      */
     async function generar() {
-        if (typeof window.html2pdf !== 'function') {
-            throw new Error('html2pdf.js no está cargado. Verifica el CDN en index.html.');
-        }
-
         const D = window.Darabia;
         if (!D || !D.estado) {
             throw new Error('Estado del simulador no disponible.');
         }
         const estado = D.estado;
 
-        // Construir HTML del documento
-        const html = _construirHTML(estado);
+        const html = _construirDocumentoCompleto(estado);
 
-        // Contenedor temporal que html2canvas pueda renderizar.
-        // IMPORTANTE: NO usar `left: -9999px` ni `display:none` porque
-        // html2canvas no renderiza elementos fuera del viewport ni ocultos.
-        // Solución: contenedor visible con tamaño explícito A4 pero detrás
-        // de todo (z-index negativo) y opacidad 0 para no molestar al usuario.
-        const contenedor = document.createElement('div');
-        contenedor.style.position = 'fixed';
-        contenedor.style.top = '0';
-        contenedor.style.left = '0';
-        contenedor.style.width = '210mm';
-        contenedor.style.minHeight = '297mm';
-        contenedor.style.background = '#ffffff';
-        contenedor.style.zIndex = '-9999';
-        contenedor.style.opacity = '0';
-        contenedor.style.pointerEvents = 'none';
-        contenedor.innerHTML = html;
-        document.body.appendChild(contenedor);
+        // Abrir ventana nueva. Si el navegador bloquea popups, fallará.
+        // Esta llamada DEBE venir de un click directo del usuario para
+        // que el navegador permita la apertura.
+        const ventana = window.open('', '_blank', 'width=900,height=1100');
+        if (!ventana) {
+            throw new Error(
+                'El navegador ha bloqueado la ventana de impresión. ' +
+                'Permite las ventanas emergentes para este sitio y reintenta.'
+            );
+        }
 
-        const slug = _slugNombre(estado?.alumno?.nombre);
-        const filename = `Dictamen_${slug}.pdf`;
+        // Inyectar el documento completo y cerrar el flujo de escritura
+        // para que el navegador procese el contenido y dispare el evento load.
+        ventana.document.open();
+        ventana.document.write(html);
+        ventana.document.close();
 
-        const opciones = {
-            margin:       0,
-            filename:     filename,
-            image:        { type: 'jpeg', quality: 0.96 },
-            html2canvas:  {
-                scale: 2,
-                useCORS: true,
-                letterRendering: true,
-                logging: false
-            },
-            jsPDF:        {
-                unit: 'mm',
-                format: 'a4',
-                orientation: 'portrait'
-            },
-            pagebreak:    { mode: ['css', 'legacy'] }
-        };
-
-        try {
-            await window.html2pdf().set(opciones).from(contenedor).save();
-
-            // Persistir timestamp tras éxito
-            if (estado?.dictamen) {
-                estado.dictamen.pdf_generado_at = new Date().toISOString();
-                if (D.Persistencia?.guardar) {
-                    D.Persistencia.guardar();
-                }
-            }
-        } finally {
-            // Limpiar contenedor temporal SIEMPRE (éxito o error).
-            // Usamos contenedor.remove() que es más robusto que
-            // parentElement.removeChild — funciona aunque el padre
-            // haya cambiado y no lanza si ya estaba desmontado.
-            try {
-                if (contenedor && contenedor.remove) {
-                    contenedor.remove();
-                } else if (contenedor && contenedor.parentNode) {
-                    contenedor.parentNode.removeChild(contenedor);
-                }
-            } catch (_) {
-                // Ignorar fallos de limpieza: lo importante es no
-                // enmascarar el error original de la generación.
+        // Persistir timestamp tras lanzar la ventana de impresión.
+        if (estado?.dictamen) {
+            estado.dictamen.pdf_generado_at = new Date().toISOString();
+            if (D.Persistencia?.guardar) {
+                try { D.Persistencia.guardar(); } catch (_) { /* ignorar */ }
             }
         }
     }
 
-    /** ====================================================================
+    /* ====================================================================
      *  EXPORTAR
      *  ==================================================================== */
 
